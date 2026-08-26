@@ -1,0 +1,3131 @@
+/* ============================================================
+   HyperQuant Media — "Orrery" Cosmic Design System
+   Stack: Bootstrap 5 grid + Three.js starfield (home) + vanilla CSS
+   Theme: deep void · stellar accents · enigmatic constellation
+   ============================================================ */
+
+/* ── Design Tokens ── */
+:root {
+  /* Space — backgrounds, deepest to lifted */
+  --void:       #04040c;
+  --space:      #07071a;
+  --space-2:    #0b0c22;
+  --panel:      #11122e;
+  --panel-2:    #181a3c;
+  --panel-edge: #23264f;
+
+  /* Hairlines */
+  --line-faint: rgba(180, 195, 255, 0.07);
+  --line:       rgba(180, 195, 255, 0.13);
+  --line-bright:rgba(180, 195, 255, 0.22);
+
+  /* Starlight — text */
+  --star:       #eef1ff;
+  --star-dim:   #aab4d8;
+  --star-faint: #767ea6;            /* 5.03:1 on --space — clears WCAG AA (4.5) */
+
+  /* Stellar accents */
+  --polaris:      #ffce6e;            /* north-star gold — primary */
+  --polaris-dim:  rgba(255, 206, 110, 0.12);
+  --polaris-glow: rgba(255, 206, 110, 0.30);
+
+  --nebula:       #57e1c4;            /* nebula cyan */
+  --nebula-dim:   rgba(87, 225, 196, 0.12);
+  --nebula-glow:  rgba(87, 225, 196, 0.28);
+
+  --aurora:       #a98bff;            /* aurora violet */
+  --aurora-dim:   rgba(169, 139, 255, 0.12);
+  --aurora-glow:  rgba(169, 139, 255, 0.30);
+
+  --rose:         #f472b6;            /* far accent */
+  --rose-dim:     rgba(244, 114, 182, 0.12);
+  --rose-glow:    rgba(244, 114, 182, 0.30);
+
+  --stellar:      #b8d3ff;            /* blue-white — a hot main-sequence star */
+  --stellar-dim:  rgba(184, 211, 255, 0.12);
+  --stellar-glow: rgba(184, 211, 255, 0.30);
+
+  /* Two families the five above could not cover: the Contact page offers six
+     topics, and a topic wearing another topic's colour is a miscue. Comet is
+     the deep blue of a body on a long orbit — the Cosmos, still inbound.
+     Ember is the warm coral of a deal being struck. */
+  --comet:        #6aa6ff;            /* 8.07:1 on --space */
+  --comet-dim:    rgba(106, 166, 255, 0.12);
+  --comet-glow:   rgba(106, 166, 255, 0.30);
+
+  --ember:        #ff9166;            /* 9.00:1 on --space */
+  --ember-dim:    rgba(255, 145, 102, 0.12);
+  --ember-glow:   rgba(255, 145, 102, 0.30);
+
+  /* Caution. Deliberately outside the accent family: an unverified claim is
+     not a brand colour, and gold would read as a link here. */
+  --warn:         #ff5f52;
+  --warn-dim:     rgba(255, 95, 82, 0.12);
+
+  /* Theme-dependent surfaces. These encode "light ink on a dark ground" and
+     must flip in light mode, so they are tokens rather than literals. */
+  --dust-1: rgba(255,255,255,0.70);
+  --dust-2: rgba(255,255,255,0.55);
+  --dust-3: rgba(255,255,255,0.60);
+  --dust-4: rgba(255,255,255,0.45);
+  --dust-5: rgba(255,255,255,0.50);
+  --dust-6: rgba(255,255,255,0.40);
+
+  --nav-scrim:        rgba(7, 7, 26, 0.72);   /* = --veil: the nav is a band like any other */
+  --hero-scrim:       rgba(4, 4, 12, 0.55);
+  --shadow-hard:      rgba(0, 0, 0, 0.90);
+  --shadow-soft:      rgba(0, 0, 0, 0.70);
+  --glass-top:        rgba(24, 26, 60, 0.50);
+  --glass-bottom:     rgba(17, 18, 46, 0.50);
+  --card-fill:        rgba(17, 18, 46, 0.70);
+  --card-fill-hover:  rgba(24, 26, 60, 0.80);
+  --tag-fill:         rgba(180, 195, 255, 0.04);
+  /* Section veil. Banded sections used solid --space, which blocked the
+     constellation field and made it appear and disappear down the page.
+     Translucent instead, so the field is continuous while text keeps its
+     contrast. */
+  --veil:             rgba(7, 7, 26, 0.72);
+  --veil-deep:        rgba(4, 4, 12, 0.78);
+  --polaris-bright:   #ffd98a;
+  --logo-plate:       #f4f5f8;
+
+  /* Type */
+  --font-display: 'Space Grotesk', 'Inter', sans-serif;
+  --font-mono:    'Space Mono', 'SFMono-Regular', monospace;
+  /* The wordmark is set in JetBrains Mono, so the brand lockup uses it too. */
+  --font-brand:   'JetBrains Mono', 'Space Mono', 'SFMono-Regular', monospace;
+  --font-body:    'Inter', system-ui, sans-serif;
+
+  --radius:    12px;
+  --radius-lg: 18px;
+  --radius-pill: 100px;
+  --transition: 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ── Light theme ──
+   The dark palette above is the design's native state and stays the default.
+   Light mode redefines only the tokens; no component rule is duplicated.
+
+   Three states, resolved in this order:
+     1. no attribute + system light  -> light   (the media query below)
+     2. no attribute + system dark   -> dark    (:root, untouched)
+     3. [data-theme] set explicitly  -> that choice wins over the system
+
+   Accents are darkened for light mode because the dark-mode values fail
+   contrast badly on a near-white ground: gold #ffce6e measures 1.37:1, cyan
+   #57e1c4 1.51:1, violet #a98bff 2.51:1. The replacements below all clear
+   WCAG AA at 4.5:1 or better against both --space and --panel.
+
+   The token list appears twice on purpose: a media query cannot join a
+   selector list, so "system light" and "explicitly chosen light" have to be
+   written separately. Edit both together. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    color-scheme: light;
+
+    --void:       #eef1f8;
+    --space:      #f6f7fb;
+    --space-2:    #eef0f8;
+    --panel:      #ffffff;
+    --panel-2:    #f5f7fd;
+    --panel-edge: #dce1f0;
+
+    --line-faint: rgba(18, 22, 56, 0.08);
+    --line:       rgba(18, 22, 56, 0.14);
+    --line-bright:rgba(18, 22, 56, 0.26);
+
+    --star:       #0c0e1a;            /* 17.9:1 on --space */
+    --star-dim:   #3b4160;            /*  9.3:1 */
+    --star-faint: #5c6282;            /*  5.6:1 */
+
+    --polaris:      #8a5a00;          /*  5.5:1 — dark-mode gold is 1.37:1 here */
+    --polaris-dim:  rgba(138, 90, 0, 0.10);
+    --polaris-glow: rgba(138, 90, 0, 0.24);
+    --polaris-bright: #6d4700;
+
+    --nebula:       #0b7a66;          /*  4.9:1 */
+    --nebula-dim:   rgba(11, 122, 102, 0.10);
+    --nebula-glow:  rgba(11, 122, 102, 0.22);
+
+    --aurora:       #5b3bd6;          /*  6.5:1 */
+    --aurora-dim:   rgba(91, 59, 214, 0.10);
+    --aurora-glow:  rgba(91, 59, 214, 0.24);
+
+    --rose:         #b02a72;          /*  5.7:1 */
+    --rose-dim:     rgba(176, 42, 114, 0.10);
+    --rose-glow:    rgba(176, 42, 114, 0.24);
+
+    --stellar:      #2d5296;          /*  6.3:1 — blue-white is a dark blue here */
+    --stellar-dim:  rgba(45, 82, 150, 0.10);
+    --stellar-glow: rgba(45, 82, 150, 0.24);
+
+    --comet:        #14509f;          /*  7.3:1 */
+    --comet-dim:    rgba(20, 80, 159, 0.10);
+    --comet-glow:   rgba(20, 80, 159, 0.24);
+
+    --ember:        #9c3d13;          /*  6.4:1 — the dark-mode coral is 2.2:1 here */
+    --ember-dim:    rgba(156, 61, 19, 0.10);
+    --ember-glow:   rgba(156, 61, 19, 0.24);
+
+    --warn:         #c02a1d;          /*  5.9:1 — the dark-mode red is 3.1:1 here */
+    --warn-dim:     rgba(192, 42, 29, 0.10);
+
+    --dust-1: rgba(30, 38, 90, 0.34);
+    --dust-2: rgba(30, 38, 90, 0.26);
+    --dust-3: rgba(30, 38, 90, 0.30);
+    --dust-4: rgba(30, 38, 90, 0.20);
+    --dust-5: rgba(30, 38, 90, 0.24);
+    --dust-6: rgba(30, 38, 90, 0.18);
+
+    --nav-scrim:       rgba(246, 247, 251, 0.80);  /* = --veil */
+    --hero-scrim:      rgba(238, 241, 248, 0.55);
+    --shadow-hard:     rgba(18, 22, 56, 0.22);
+    --shadow-soft:     rgba(18, 22, 56, 0.16);
+    --glass-top:       rgba(255, 255, 255, 0.80);
+    --glass-bottom:    rgba(244, 246, 253, 0.80);
+    --card-fill:       rgba(255, 255, 255, 0.82);
+    --card-fill-hover: rgba(255, 255, 255, 0.96);
+    --tag-fill:        rgba(18, 22, 56, 0.04);
+    --veil:            rgba(246, 247, 251, 0.80);
+    --veil-deep:       rgba(238, 241, 248, 0.86);
+    --logo-plate:      #ffffff;
+  }
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --void:       #eef1f8;
+  --space:      #f6f7fb;
+  --space-2:    #eef0f8;
+  --panel:      #ffffff;
+  --panel-2:    #f5f7fd;
+  --panel-edge: #dce1f0;
+
+  --line-faint: rgba(18, 22, 56, 0.08);
+  --line:       rgba(18, 22, 56, 0.14);
+  --line-bright:rgba(18, 22, 56, 0.26);
+
+  --star:       #0c0e1a;
+  --star-dim:   #3b4160;
+  --star-faint: #5c6282;
+
+  --polaris:      #8a5a00;
+  --polaris-dim:  rgba(138, 90, 0, 0.10);
+  --polaris-glow: rgba(138, 90, 0, 0.24);
+  --polaris-bright: #6d4700;
+
+  --nebula:       #0b7a66;
+  --nebula-dim:   rgba(11, 122, 102, 0.10);
+  --nebula-glow:  rgba(11, 122, 102, 0.22);
+
+  --aurora:       #5b3bd6;
+  --aurora-dim:   rgba(91, 59, 214, 0.10);
+  --aurora-glow:  rgba(91, 59, 214, 0.24);
+
+  --rose:         #b02a72;
+  --rose-dim:     rgba(176, 42, 114, 0.10);
+  --rose-glow:    rgba(176, 42, 114, 0.24);
+
+  --stellar:      #2d5296;
+  --stellar-dim:  rgba(45, 82, 150, 0.10);
+  --stellar-glow: rgba(45, 82, 150, 0.24);
+
+  --comet:        #14509f;
+  --comet-dim:    rgba(20, 80, 159, 0.10);
+  --comet-glow:   rgba(20, 80, 159, 0.24);
+
+  --ember:        #9c3d13;
+  --ember-dim:    rgba(156, 61, 19, 0.10);
+  --ember-glow:   rgba(156, 61, 19, 0.24);
+
+  --warn:         #c02a1d;
+  --warn-dim:     rgba(192, 42, 29, 0.10);
+
+  --dust-1: rgba(30, 38, 90, 0.34);
+  --dust-2: rgba(30, 38, 90, 0.26);
+  --dust-3: rgba(30, 38, 90, 0.30);
+  --dust-4: rgba(30, 38, 90, 0.20);
+  --dust-5: rgba(30, 38, 90, 0.24);
+  --dust-6: rgba(30, 38, 90, 0.18);
+
+  --nav-scrim:       rgba(246, 247, 251, 0.80);  /* = --veil */
+  --hero-scrim:      rgba(238, 241, 248, 0.55);
+  --shadow-hard:     rgba(18, 22, 56, 0.22);
+  --shadow-soft:     rgba(18, 22, 56, 0.16);
+  --glass-top:       rgba(255, 255, 255, 0.80);
+  --glass-bottom:    rgba(244, 246, 253, 0.80);
+  --card-fill:       rgba(255, 255, 255, 0.82);
+  --card-fill-hover: rgba(255, 255, 255, 0.96);
+  --tag-fill:        rgba(18, 22, 56, 0.04);
+  --veil:            rgba(246, 247, 251, 0.80);
+  --veil-deep:       rgba(238, 241, 248, 0.86);
+  --logo-plate:      #ffffff;
+}
+
+:root[data-theme="dark"] { color-scheme: dark; }
+
+/* The nebula tints in body::after are accent-alpha over the ground; they read
+   as a faint wash in dark and would muddy a near-white page, so lift them out
+   of the way in light mode. */
+:root[data-theme="light"] body::after { opacity: 0.5; }
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) body::after { opacity: 0.5; }
+}
+
+/* ── Reset / Base ── */
+*, *::before, *::after { box-sizing: border-box; }
+html {
+  background-color: var(--void);
+  scroll-behavior: smooth;
+  /* No page here scrolls sideways. `clip` rather than `hidden` so html does
+     not become a scroll container, which would break position: sticky. */
+  overflow-x: clip;
+}
+
+body {
+  /* Transparent so the fixed constellation canvas behind it is visible; the
+     ground colour lives on html instead. */
+  background-color: transparent;
+  color: var(--star);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.7;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* Persistent starfield wash behind every page */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -3;
+  transition: opacity 1.2s ease;
+  background:
+    radial-gradient(1px 1px at 18% 26%, var(--dust-1), transparent),
+    radial-gradient(1px 1px at 72% 14%, var(--dust-2), transparent),
+    radial-gradient(1.3px 1.3px at 44% 62%, var(--dust-3), transparent),
+    radial-gradient(1px 1px at 88% 48%, var(--dust-4), transparent),
+    radial-gradient(1px 1px at 30% 82%, var(--dust-5), transparent),
+    radial-gradient(1.4px 1.4px at 62% 90%, var(--dust-6), transparent),
+    radial-gradient(1px 1px at 8% 56%, var(--dust-6), transparent);
+  background-repeat: no-repeat;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Deep nebula tints anchored to viewport */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(60% 50% at 12% 0%, color-mix(in srgb, var(--aurora) 10%, transparent), transparent 70%),
+    radial-gradient(55% 45% at 92% 8%, color-mix(in srgb, var(--nebula) 7%, transparent), transparent 70%),
+    radial-gradient(70% 60% at 50% 110%, color-mix(in srgb, var(--polaris) 6%, transparent), transparent 70%);
+  pointer-events: none;
+}
+
+a { color: inherit; text-decoration: none; }
+em { font-style: italic; }
+
+.section-padding { padding: 110px 0; position: relative; }
+/* The alternating section band. One class, used by every page that bands
+   its sections, so the veil and its hairlines cannot drift per page. The
+   pedigree and CTA sections carry the same treatment through their own
+   classes. */
+.band {
+  background: var(--veil);
+  border-top: 1px solid var(--line-faint);
+  border-bottom: 1px solid var(--line-faint);
+}
+.section-divider { border-top: 1px solid var(--line-faint); margin: 0 5%; }
+
+/* ── Accent Utilities ── */
+.c-polaris { color: var(--polaris); }
+.c-nebula  { color: var(--nebula); }
+.c-aurora  { color: var(--aurora); }
+.c-faint   { color: var(--star-faint); }
+.c-rose    { color: var(--rose); }
+.c-stellar { color: var(--stellar); }
+.bg-polaris { background-color: var(--polaris); }
+.bg-nebula  { background-color: var(--nebula); }
+.bg-aurora  { background-color: var(--aurora); }
+
+/* ── Navbar ── */
+#mainNav {
+  padding: 18px 0;
+  transition: background var(--transition), padding var(--transition), box-shadow var(--transition);
+  background: transparent;
+}
+
+#mainNav.scrolled {
+  background: var(--nav-scrim);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  padding: 11px 0;
+  box-shadow: 0 1px 0 var(--line-faint), 0 20px 50px -30px var(--shadow-hard);
+}
+
+.navbar-brand {
+  font-family: var(--font-display);
+  font-size: 1.08rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0;
+  margin: 0;
+}
+
+/* Brand block: lockup stacked over its social row. */
+.brand-block { display: flex; flex-direction: column; gap: 5px; }
+
+.brand-lockup { display: inline-flex; align-items: center; gap: 10px; }
+.brand-mark {
+  display: block;
+  flex: none;
+  /* The glow is the logo's own blue, not a theme accent: the mark stays
+     the same blue in both themes, so its halo does too. */
+  filter: drop-shadow(0 0 10px rgba(3, 116, 229, 0.28));
+}
+/* Three lines, per the brand asset's own composition: HYPER / QUANT / MEDIA.
+   One colour; the mark beside it carries the brand blue. */
+.brand-word {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.12;
+  font-family: var(--font-brand);
+  font-weight: 800;
+  text-transform: uppercase;
+  /* Caps need the tracking opened up; monospace caps set solid read as a block. */
+  letter-spacing: 0.09em;
+  color: var(--star);
+}
+.brand-nav .brand-word    { font-size: 0.62rem; }
+.brand-footer .brand-word { font-size: 0.56rem; }
+.brand-lg .brand-word     { font-size: 1.02rem; letter-spacing: 0.12em; }
+
+.brand-social { display: flex; align-items: center; gap: 4px; }
+/* Optically align the icon row with the wordmark, not the mark. The negative
+   inset cancels the first link's hit-area padding so the glyph itself lines up. */
+.brand-social.d-lg-flex { padding-left: 40px; }
+.brand-social-link {
+  /* The hit area must clear 24x24 (WCAG 2.5.8), so the padding around the
+     glyph is load-bearing -- do not collapse it to make the row tighter. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  color: var(--star-faint);
+  border-radius: 6px;
+  transition: color var(--transition), background var(--transition);
+}
+.brand-social-link svg { width: 17px; height: 17px; display: block; }
+.brand-social-link:hover { color: var(--polaris); background: var(--polaris-dim); }
+
+.mobile-social {
+  border-top: 1px solid var(--line-faint);
+  gap: 8px;
+}
+.mobile-social .brand-social-link { width: 38px; height: 38px; }
+.mobile-social .brand-social-link svg { width: 20px; height: 20px; }
+
+/* The stacked brand is taller than a single line, so the scrolled navbar keeps
+   a little more room than the old text-only lockup needed. */
+@media (max-width: 991.98px) {
+  .brand-block { gap: 0; }
+  .brand-nav .brand-mark { width: 30px; height: 30px; }
+  .brand-nav .brand-word { font-size: 0.55rem; }
+}
+
+.brand-star {
+  color: var(--polaris);
+  font-size: 0.85rem;
+  filter: drop-shadow(0 0 6px var(--polaris-glow));
+  animation: twinkle 3.5s ease-in-out infinite;
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.55; transform: scale(0.82); }
+}
+
+
+.nav-link {
+  color: var(--star-dim) !important;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  padding: 6px 13px !important;
+  border-radius: 8px;
+  transition: color var(--transition), background var(--transition);
+}
+
+.nav-link:hover,
+.nav-link.active {
+  color: var(--star) !important;
+  background: var(--line-faint);
+}
+
+.nav-cta {
+  font-family: var(--font-mono);
+  border: 1px solid var(--polaris-glow) !important;
+  background: var(--polaris-dim) !important;
+  color: var(--polaris) !important;
+}
+
+.nav-cta:hover {
+  background: var(--polaris) !important;
+  color: var(--void) !important;
+  border-color: var(--polaris) !important;
+  box-shadow: 0 0 24px var(--polaris-glow);
+}
+
+.navbar-toggler {
+  border: 1px solid var(--line);
+  padding: 8px 10px;
+  background: none;
+}
+
+.toggler-icon {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background: var(--star-dim);
+  margin: 4px 0;
+  border-radius: 2px;
+  transition: var(--transition);
+}
+
+/* ── Hero (Home) ── */
+.hero-section {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* The constellation field. Fixed behind every page, so scrolling and
+   navigating both happen "inside" it rather than past it.
+
+   Layer order, back to front:
+     -3  body::before   static star wash (the no-JS / no-WebGL fallback)
+     -2  #siteCanvas    the live field
+     -1  body::after    nebula tints, drifting over the stars
+      0  page content
+
+   Once the canvas reports itself live, the static wash fades out -- keeping
+   both would double the star density. */
+#siteCanvas {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: -2;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1.2s ease;
+}
+#siteCanvas.live { opacity: 1; }
+body.field-live::before { opacity: 0; }
+
+/* Reading progress: a hairline across the very top, scaled by js/app.js from
+   the same rAF scroll handler that drives the navbar state. Above the navbar
+   (z 1030) so it stays visible once the nav goes solid. */
+#scrollProgress {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  z-index: 1040;
+  background: linear-gradient(90deg, var(--polaris), var(--nebula), var(--aurora));
+  transform-origin: 0 50%;
+  transform: scaleX(0);
+  pointer-events: none;
+}
+
+/* Cursor comet trail: above everything, catching no pointer events. */
+#cometCanvas {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 2050;
+  pointer-events: none;
+}
+
+/* Page swaps cross-fade briefly. The starfield canvas persists through the
+   swap, so only the content layer fades -- the field itself never blinks.
+   Browsers without the View Transitions API skip this and swap instantly. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.25s;
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) { animation: none; }
+}
+
+.hero-overlay {
+  position: absolute;
+  inset: 0;
+  /* Softened: with the field now continuous behind every section, fading all
+     the way to --void here drew a visible seam at the hero's bottom edge. */
+  background: radial-gradient(ellipse 90% 70% at center, transparent 0%, var(--hero-scrim) 85%);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  padding: 120px 20px 80px;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 400;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--polaris);
+  border: 1px solid var(--polaris-glow);
+  background: var(--polaris-dim);
+  padding: 6px 18px;
+  border-radius: var(--radius-pill);
+  margin-bottom: 30px;
+}
+/* All three stars in the badge are the same size: the leading glyph and
+   the separators are the same rank. */
+.hero-badge::before { content: '✦'; font-size: 0.7rem; }
+.badge-sep { font-size: 0.7rem; }
+
+.hero-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1.04;
+  margin-bottom: 22px;
+  letter-spacing: -0.03em;
+}
+
+.title-line {
+  display: block;
+  font-size: clamp(2.7rem, 7.5vw, 6rem);
+  color: var(--star);
+}
+
+.title-line.title-accent {
+  background: linear-gradient(120deg, var(--polaris) 0%, var(--nebula) 50%, var(--aurora) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-tagline {
+  font-family: var(--font-display);
+  font-size: clamp(1.05rem, 2.6vw, 1.5rem);
+  font-weight: 500;
+  color: var(--star);
+  letter-spacing: 0;
+  margin-bottom: 10px;
+}
+
+.hero-sub {
+  font-family: var(--font-mono);
+  font-size: 0.84rem;
+  color: var(--star-dim);
+  margin-bottom: 40px;
+  letter-spacing: 0.04em;
+}
+
+.hero-cta { margin-top: 4px; }
+
+.scroll-indicator {
+  position: absolute;
+  bottom: 34px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+}
+
+.scroll-line {
+  width: 1px;
+  height: 58px;
+  background: linear-gradient(to bottom, transparent, var(--polaris));
+  animation: scrollPulse 2.4s ease-in-out infinite;
+}
+
+@keyframes scrollPulse {
+  0%   { opacity: 0; transform: scaleY(0); transform-origin: top; }
+  50%  { opacity: 1; }
+  100% { opacity: 0; transform: scaleY(1); transform-origin: top; }
+}
+
+/* ── Page Hero (Inner Pages) ── */
+.page-hero {
+  position: relative;
+  padding: 175px 0 90px;
+  overflow: hidden;
+  text-align: center;
+}
+
+.page-hero-glow {
+  position: absolute;
+  top: -160px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 680px;
+  height: 680px;
+  border-radius: 50%;
+  filter: blur(130px);
+  opacity: 0.16;
+  pointer-events: none;
+}
+
+.page-hero-glow.polaris { background: var(--polaris); }
+.page-hero-glow.nebula  { background: var(--nebula); }
+.page-hero-glow.aurora  { background: var(--aurora); }
+
+.page-hero-content { position: relative; z-index: 1; }
+
+.page-hero-title {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 6vw, 4.6rem);
+  font-weight: 700;
+  color: var(--star);
+  letter-spacing: -0.03em;
+  margin-bottom: 18px;
+}
+
+.page-hero-sub {
+  font-size: 1.05rem;
+  color: var(--star-dim);
+  max-width: 580px;
+  margin: 0 auto;
+}
+
+/* ── Shared Section Heads ── */
+.section-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 400;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--polaris);
+  margin-bottom: 14px;
+}
+.section-label::before { content: '✦'; font-size: 0.62rem; opacity: 0.9; }
+
+.section-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 3.6vw, 2.7rem);
+  font-weight: 600;
+  color: var(--star);
+  line-height: 1.18;
+  letter-spacing: -0.02em;
+  margin-bottom: 18px;
+}
+
+/* Three claims, three alignments — the line steps across its column instead
+   of sitting as one block. Each claim is its own span so the stagger holds at
+   any width and never depends on where the text happens to wrap. */
+.title-cascade span { display: block; }
+.title-cascade span:nth-child(1) { text-align: left; }
+.title-cascade span:nth-child(2) { text-align: center; }
+.title-cascade span:nth-child(3) { text-align: right; }
+
+.section-body {
+  font-size: 1rem;
+  color: var(--star-dim);
+  line-height: 1.8;
+  margin-bottom: 14px;
+  max-width: 560px;
+}
+
+/* Prose under a centred heading. .section-body is capped at 560px and
+   centred with mx-auto, which is right for a centred lede but wrong once
+   the text is left-aligned: the block floats mid-column and its left edge
+   lines up with nothing. Inside this wrapper the prose fills its column. */
+.section-prose .section-body { max-width: none; }
+
+.section-sub {
+  font-size: 1.03rem;
+  color: var(--star-dim);
+  max-width: 600px;
+  margin-bottom: 0;
+  line-height: 1.7;
+}
+
+/* ── Buttons ── */
+/* Every CTA is the voyage capsule at button scale: a night-sky ground, a
+   scene made of real SVG geometry inside it, and the label on top. Which
+   scene a button gets is decided from its destination in Cta.astro; the
+   rules below are what each scene does.
+
+   Two contracts, both taken from the Star Chart button: nothing is painted
+   with background-image tricks (geometry is geometry), and nothing veils the
+   scene -- it is drawn faint and the label carries a shadow instead. Every
+   scene also answers hover, which is where the button earns its motion.
+
+   Animation is CSS, never SMIL, so the site-wide prefers-reduced-motion rule
+   at the foot of this file stops all of it.
+
+   Primary and ghost share the capsule and differ in temperature: primary is
+   gold-washed, gold-rimmed and gold-lettered; ghost keeps the neutral ground
+   and starlight text. */
+.cta {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 14px 30px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line-bright);
+  background:
+    radial-gradient(75% 140% at 12% 0%, var(--aurora-dim), transparent 62%),
+    radial-gradient(65% 140% at 88% 100%, var(--nebula-dim), transparent 62%),
+    var(--space-2);
+  transition: border-color var(--transition), box-shadow var(--transition),
+              transform var(--transition), color var(--transition);
+}
+.cta:hover { transform: translateY(-2px); }
+
+.btn-primary-custom {
+  border-color: var(--polaris-glow);
+  color: var(--polaris-bright);
+  background:
+    radial-gradient(80% 150% at 15% 0%, var(--polaris-dim), transparent 64%),
+    radial-gradient(60% 140% at 88% 100%, var(--nebula-dim), transparent 62%),
+    color-mix(in srgb, var(--polaris) 9%, var(--space-2));
+}
+.btn-primary-custom:hover {
+  border-color: var(--polaris);
+  color: var(--polaris-bright);
+  box-shadow: 0 12px 34px -18px var(--shadow-soft), 0 0 28px -8px var(--polaris-glow);
+}
+
+.btn-ghost-custom { color: var(--star); }
+.btn-ghost-custom:hover {
+  border-color: var(--polaris-glow);
+  box-shadow: 0 12px 30px -20px var(--shadow-soft), 0 0 20px -10px var(--polaris-glow);
+}
+
+/* The scene sits below the label in the button's own stacking context. */
+.cta-scene {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  opacity: 0.72;
+  transition: opacity var(--transition);
+}
+.cta:hover .cta-scene { opacity: 1; }
+
+.cta-label {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-shadow: 0 1px 8px var(--shadow-hard);
+}
+.cta-arrow { transition: transform var(--transition); }
+.cta:hover .cta-arrow { transform: translateX(4px); }
+
+/* The starfield under every scene. */
+.cta-stars circle { fill: var(--star-faint); animation: ctaTwinkle 3.6s ease-in-out infinite; }
+.cta-stars circle:nth-child(odd) { animation-delay: -1.8s; }
+.cta-stars circle:nth-child(3n) { animation-delay: -0.7s; animation-duration: 4.4s; }
+.cta:hover .cta-stars circle { animation-duration: 1.7s; }
+@keyframes ctaTwinkle { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.95; } }
+
+/* Comet: a head with a tapered tail, flying a curve. The motion path is why
+   this is offset-path rather than a translate -- the comet banks with the
+   curve because offset-rotate turns it. Homeward reverses both. */
+.cta-comet {
+  offset-path: path("M -26 34 C 44 14, 128 44, 246 10");
+  offset-rotate: auto;
+  animation: ctaTravel 5.4s linear infinite;
+}
+.cta-homeward .cta-comet { animation-direction: reverse; offset-rotate: auto 180deg; }
+.cta-comet-tail { fill: var(--polaris); opacity: 0.45; }
+.cta-comet-head { fill: var(--star); }
+.cta:hover .cta-comet { animation-duration: 2.6s; }
+.cta:hover .cta-comet-head { fill: var(--polaris-bright); }
+.cta:hover .cta-comet-tail { opacity: 0.7; }
+@keyframes ctaTravel {
+  0%   { offset-distance: 0%;   opacity: 0; }
+  8%   { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { offset-distance: 100%; opacity: 0; }
+}
+
+/* Explore: a survey beam sweeps the field, bright edge first. */
+.cta-beam { animation: ctaSweep 3.6s ease-in-out infinite; }
+.cta-beam-wash { fill: var(--polaris); opacity: 0.16; filter: blur(5px); }
+.cta-beam-edge { fill: var(--polaris-bright); opacity: 0.55; }
+.cta:hover .cta-beam { animation-duration: 1.9s; }
+@keyframes ctaSweep {
+  0%   { transform: translateX(-26px) skewX(-10deg); opacity: 0; }
+  10%  { opacity: 1; }
+  88%  { opacity: 1; }
+  100% { transform: translateX(246px) skewX(-10deg); opacity: 0; }
+}
+
+/* Constellate: the line draws itself between four stars, holds, then clears
+   so the sky can be charted again. Each node lights as the line reaches it. */
+.cta-line {
+  fill: none;
+  stroke: var(--polaris);
+  stroke-width: 1;
+  stroke-dasharray: 178;
+  stroke-dashoffset: 178;
+  animation: ctaDraw 5.6s ease-in-out infinite;
+}
+.cta-node { fill: var(--polaris); animation: ctaNode 5.6s ease-in-out infinite; }
+.cta-node:nth-of-type(2) { animation-delay: 0.7s; }
+.cta-node:nth-of-type(3) { animation-delay: 1.4s; }
+.cta-node:nth-of-type(4) { animation-delay: 2.1s; }
+.cta:hover .cta-line, .cta:hover .cta-node { animation-duration: 3.2s; }
+.cta:hover .cta-node:nth-of-type(2) { animation-delay: 0.4s; }
+.cta:hover .cta-node:nth-of-type(3) { animation-delay: 0.8s; }
+.cta:hover .cta-node:nth-of-type(4) { animation-delay: 1.2s; }
+@keyframes ctaDraw {
+  0%   { stroke-dashoffset: 178; opacity: 0.25; }
+  55%  { stroke-dashoffset: 0;   opacity: 0.85; }
+  82%  { stroke-dashoffset: 0;   opacity: 0.85; }
+  100% { stroke-dashoffset: 0;   opacity: 0; }
+}
+@keyframes ctaNode { 0%, 100% { opacity: 0.25; } 22%, 78% { opacity: 1; } }
+
+/* Forge: sparks lift off the floor and drift as they climb. */
+.cta-forge-floor { fill: var(--polaris); opacity: 0.18; filter: blur(4px); }
+.cta-spark { fill: var(--polaris-bright); animation: ctaSpark 2.9s linear infinite; }
+.cta-spark:nth-of-type(1) { animation-delay: -0.2s; animation-duration: 3.1s; }
+.cta-spark:nth-of-type(2) { animation-delay: -1.4s; animation-name: ctaSparkDrift; }
+.cta-spark:nth-of-type(3) { animation-delay: -0.8s; animation-duration: 2.4s; }
+.cta-spark:nth-of-type(4) { animation-delay: -2.1s; animation-name: ctaSparkDrift; animation-duration: 3.3s; }
+.cta-spark:nth-of-type(5) { animation-delay: -1.7s; animation-duration: 2.7s; }
+.cta:hover .cta-spark { animation-duration: 1.5s; }
+@keyframes ctaSpark {
+  0%   { transform: translate(0, 4px);      opacity: 0; }
+  14%  { opacity: 1; }
+  100% { transform: translate(-7px, -46px); opacity: 0; }
+}
+@keyframes ctaSparkDrift {
+  0%   { transform: translate(0, 4px);     opacity: 0; }
+  14%  { opacity: 1; }
+  100% { transform: translate(8px, -46px); opacity: 0; }
+}
+
+/* Signal: a pulse rings outward from the centre, answered by a blip. The
+   rings scale rather than animating r, and hold a 1px stroke while they do. */
+.cta-ring {
+  fill: none;
+  stroke: var(--polaris);
+  stroke-width: 1;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ctaRing 3s ease-out infinite;
+}
+.cta-ring:nth-of-type(2) { animation-delay: 1s; }
+.cta-ring:nth-of-type(3) { animation-delay: 2s; }
+.cta-blip {
+  fill: var(--polaris-bright);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ctaBlip 3s ease-out infinite;
+}
+.cta:hover .cta-ring, .cta:hover .cta-blip { animation-duration: 1.6s; }
+.cta:hover .cta-ring:nth-of-type(2) { animation-delay: 0.53s; }
+.cta:hover .cta-ring:nth-of-type(3) { animation-delay: 1.06s; }
+@keyframes ctaRing {
+  0%   { transform: scale(0.35); opacity: 0.85; }
+  100% { transform: scale(9);    opacity: 0; }
+}
+@keyframes ctaBlip {
+  0%        { transform: scale(0.4);  opacity: 1; }
+  22%       { transform: scale(1.15); opacity: 0.9; }
+  60%, 100% { transform: scale(0.4);  opacity: 0.35; }
+}
+
+/* ── Glass Card Base ── */
+.glass {
+  background: linear-gradient(180deg, var(--glass-top), var(--glass-bottom));
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+/* ── Home — Service Cards ── */
+.service-card-link { display: block; height: 100%; }
+
+.service-card {
+  position: relative;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 30px 26px;
+  height: 100%;
+  overflow: hidden;
+  transition: background var(--transition), transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+}
+
+.service-card::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent, var(--polaris)), transparent);
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+
+.service-card:hover {
+  background: var(--panel-2);
+  border-color: var(--line-bright);
+  transform: translateY(-4px);
+  box-shadow: 0 20px 50px -20px var(--shadow-soft);
+}
+.service-card:hover::after { opacity: 1; }
+
+.service-card.a-nebula  { --accent: var(--nebula); }
+.service-card.a-aurora  { --accent: var(--aurora); }
+.service-card.a-polaris { --accent: var(--polaris); }
+.service-card.a-rose    { --accent: var(--rose); }
+.service-card.a-stellar { --accent: var(--stellar); }
+
+.service-icon {
+  font-size: 1.5rem;
+  margin-bottom: 16px;
+  display: block;
+  color: var(--accent, var(--polaris));
+  filter: drop-shadow(0 0 10px transparent);
+  transition: filter var(--transition);
+}
+.service-card:hover .service-icon { filter: drop-shadow(0 0 10px var(--accent)); }
+
+.service-card-title {
+  font-family: var(--font-display);
+  font-size: 1.12rem;
+  font-weight: 600;
+  color: var(--star);
+  margin-bottom: 10px;
+  line-height: 1.3;
+}
+
+.service-card-body {
+  font-size: 0.88rem;
+  color: var(--star-dim);
+  line-height: 1.7;
+  margin-bottom: 18px;
+}
+
+.service-link {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--accent, var(--polaris));
+}
+
+/* ── Home — Constellation / Ecosystem Teaser ── */
+.ecosystem-section {
+  background:
+    radial-gradient(80% 60% at 50% 0%, color-mix(in srgb, var(--aurora) 6%, transparent), transparent 60%);
+  border-top: 1px solid var(--line-faint);
+  border-bottom: 1px solid var(--line-faint);
+}
+
+/* ── Pedigree / Logos (homepage + services, one component) ── */
+.experience-section { background: var(--veil); border-top: 1px solid var(--line-faint); border-bottom: 1px solid var(--line-faint); }
+
+/* The homepage treatment: the band owns roughly two-thirds of a viewport at
+   any size, centred, so it reads as a destination rather than a strip
+   passed on the way somewhere else. svh rather than vh so mobile browsers
+   with collapsing chrome do not overshoot. */
+.pedigree-feature {
+  min-height: 66svh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  /* Tighter than the generic section padding: the target is ~two-thirds of
+     a viewport, and the default 110px bands pushed the natural height well
+     past it. */
+  padding: 52px 0;
+}
+/* Tile size follows the viewport's short axis, so short laptop screens get
+   smaller tiles instead of a band that overflows the viewport. */
+.pedigree-feature .logo-grid { max-width: min(760px, 92svh); margin-left: auto; margin-right: auto; }
+.pedigree-feature .section-sub { margin-bottom: 0; }
+.pedigree-feature .mb-5 { margin-bottom: 2rem !important; }
+/* Phones: four tighter columns instead of three, so the band still reads as
+   one screenful rather than a scroll of its own. */
+@media (max-width: 575.98px) {
+  .pedigree-feature { padding: 40px 0; }
+  .pedigree-feature .logo-grid { gap: 8px; }
+  .pedigree-feature .logo-tile { width: calc(25% - 6px); }
+}
+
+/* Logo tiles.
+   The source logos are heterogeneous -- wordmarks on white next to full-bleed
+   square artwork -- which is what made the old logo row read as a sticker
+   sheet. The assets are pre-normalised (trimmed to content, then padded to a
+   consistent optical size on a square canvas), so the tiles only need to
+   enforce one size and one radius. A light plate is required because several
+   logos are black-on-white and would vanish on the dark ground. */
+/* Flex rather than grid: the logo count is 13 and will keep changing, so no
+   fixed column count divides it evenly. Wrapping flex centres whatever the
+   last row holds, which is what an orphan row needs. */
+.logo-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px;
+  max-width: 880px;
+  margin: 0 auto;
+}
+.logo-tile { width: 132px; }
+@media (max-width: 991.98px) { .logo-tile { width: calc(25% - 11px); } }
+@media (max-width: 575.98px) { .logo-grid { gap: 10px; } .logo-tile { width: calc(33.33% - 7px); } }
+
+.logo-tile {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--logo-plate);
+  border: 1px solid var(--line-faint);
+  border-radius: var(--radius);
+  overflow: hidden;
+  filter: grayscale(0.18);
+  opacity: 0.86;
+  transition: filter var(--transition), opacity var(--transition),
+              border-color var(--transition), transform var(--transition);
+}
+.logo-tile img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.logo-tile:hover {
+  filter: none;
+  opacity: 1;
+  border-color: var(--line-bright);
+  transform: translateY(-2px);
+}
+
+.logo-credit {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  color: var(--star-faint);
+  text-align: center;
+  margin: 22px 0 0;
+}
+
+
+/* Social glyphs are inline SVG with no intrinsic size, so constrain them here
+   or they expand to fill their button. */
+.social-link svg { width: 19px; height: 19px; display: block; }
+.social-link-lg { display: inline-flex; align-items: center; gap: 8px; }
+.social-link-lg svg { width: 17px; height: 17px; flex: none; }
+
+/* Five service cards no longer divide into Bootstrap's twelve columns, so the
+   overview row uses its own grid: five across on wide screens, then 3 / 2 / 1.
+   auto-fit is avoided on purpose -- with five items it strands a lone card. */
+.service-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 20px;
+}
+@media (max-width: 1399.98px) { .service-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 991.98px)  { .service-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 575.98px)  { .service-grid { grid-template-columns: 1fr; gap: 14px; } }
+.service-grid > div { display: flex; }
+.service-grid .service-card-link { display: flex; width: 100%; }
+.service-grid .service-card { width: 100%; }
+
+/* Two title cards side by side now, rather than one centred feature. */
+.project-icon { width: 64px; height: 64px; display: block; margin-bottom: 14px; }
+.project-name {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 0 0 4px;
+  color: var(--star);
+}
+.featured-project.a-aurora { --accent: var(--aurora); }
+.featured-project.a-rose   { --accent: var(--rose); }
+
+/* Specialism chips — engines and platforms. `primary` marks the ones we lead
+   with; the order in the markup is the order of specialism and is meaningful. */
+.spec-block { }
+.spec-label {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--star-faint);
+  margin-bottom: 9px;
+}
+.spec-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.spec-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.02em;
+  /* Gold throughout: lettering, rim, and a 12% wash over the lifted space
+     grey. The wash alone is invisible at this size against that dark ground —
+     the rim and the lettering are what the eye actually reads as gold. */
+  color: var(--polaris);
+  background: linear-gradient(var(--polaris-dim), var(--polaris-dim)), var(--panel-2);
+  border: 1px solid var(--polaris);
+  padding: 5px 12px;
+  border-radius: 7px;
+}
+.spec-chip svg { width: 14px; height: 14px; display: block; flex: none; color: currentColor; }
+
+/* Third-party brand colours, not palette tokens: these are the marks' own
+   identities and must not drift with the theme. Unreal and Unity are
+   monochrome brands, so their marks take the chip's text colour. Values are
+   the official brand hexes and are invariant on purpose. */
+.spec-chip[data-brand="godot"] svg       { color: #478cbf; }
+.spec-chip[data-brand="xbox"] svg        { color: #107c10; }
+.spec-chip[data-brand="playstation"] svg { color: #0070d1; }
+.spec-chip[data-brand="android"] svg     { color: #3ddc84; }
+.spec-chip[data-brand="windows"] svg     { color: #0078d4; }
+/* The lead chips keep a brighter rim, and carry the bloom below. */
+/* Every chip carries the same 1px gold rim and the same 12% wash; the lead
+   ones are marked by the bloom below, not by a heavier or brighter outline. */
+.spec-chip.primary { }
+
+/* A soft bloom on the label, for the chips we want read first. Bloom is of
+   the text's own colour, so it works on the gold lead chips and on the plain
+   ones alike. */
+.spec-chip.glow { text-shadow: 0 0 12px color-mix(in srgb, currentColor 55%, transparent); }
+.spec-chip.glow svg { filter: drop-shadow(0 0 7px color-mix(in srgb, currentColor 60%, transparent)); }
+.spec-note {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--star-faint);
+  margin: 9px 0 0;
+}
+
+/* Product icons. These replace the decorative Unicode glyphs that used to
+   stand in for each tool; the sources are the real app icons from the brand
+   asset repo, re-padded to a common optical size. */
+/* ── Theme toggle ── */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  color: var(--star-dim);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: color var(--transition), border-color var(--transition),
+              background var(--transition);
+}
+.theme-toggle:hover {
+  color: var(--polaris);
+  border-color: var(--polaris-glow);
+  background: var(--polaris-dim);
+}
+.theme-toggle svg { width: 17px; height: 17px; display: block; }
+/* Only one glyph shows at a time: sun while dark is active (click for light),
+   moon while light is active. */
+.theme-toggle .icon-moon { display: none; }
+:root[data-theme="light"] .theme-toggle .icon-sun { display: none; }
+:root[data-theme="light"] .theme-toggle .icon-moon { display: block; }
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) .theme-toggle .icon-sun { display: none; }
+  :root:not([data-theme="dark"]) .theme-toggle .icon-moon { display: block; }
+}
+:root[data-theme="dark"] .theme-toggle .icon-sun { display: block; }
+:root[data-theme="dark"] .theme-toggle .icon-moon { display: none; }
+
+/* ── Back to top ── */
+.to-top {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 60;
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: var(--star-dim);
+  background: var(--card-fill);
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 12px 30px -12px var(--shadow-soft);
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(10px);
+  transition: opacity var(--transition), transform var(--transition),
+              visibility var(--transition), color var(--transition),
+              border-color var(--transition);
+}
+.to-top.visible { opacity: 1; visibility: visible; transform: none; }
+.to-top:hover { color: var(--polaris); border-color: var(--polaris-glow); }
+.to-top svg { width: 18px; height: 18px; display: block; }
+
+@media (max-width: 575.98px) {
+  .to-top { right: 14px; bottom: 14px; width: 40px; height: 40px; }
+}
+
+/* ── Home — Studio Teaser / VoN ── */
+.von-teaser {
+  position: relative;
+  background:
+    radial-gradient(60% 80% at 100% 0%, color-mix(in srgb, var(--aurora) 10%, transparent), transparent 60%),
+    var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 38px 32px;
+  overflow: hidden;
+}
+
+.von-glyph { font-size: 2.4rem; color: var(--aurora); margin-bottom: 12px; display: block; filter: drop-shadow(0 0 14px var(--aurora-glow)); }
+.von-title { font-family: var(--font-display); font-size: 1.7rem; font-weight: 600; color: var(--star); margin-bottom: 6px; letter-spacing: -0.01em; }
+.von-genre { font-family: var(--font-mono); font-size: 0.7rem; font-weight: 400; color: var(--aurora); letter-spacing: 0.08em; text-transform: uppercase; }
+.von-status { display: flex; align-items: center; gap: 8px; }
+
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--nebula); box-shadow: 0 0 10px var(--nebula-glow); animation: pulse 2s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+.status-text { font-family: var(--font-mono); font-size: 0.72rem; font-weight: 400; color: var(--nebula); letter-spacing: 0.06em; text-transform: uppercase; }
+
+.tag {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  color: var(--star-faint);
+  background: var(--tag-fill);
+  border: 1px solid var(--line-faint);
+  padding: 4px 11px;
+  border-radius: 6px;
+}
+
+/* ── CTA Block ── */
+.cta-section { background: var(--veil); border-top: 1px solid var(--line-faint); }
+
+.cta-block {
+  position: relative;
+  background:
+    radial-gradient(60% 120% at 50% 0%, color-mix(in srgb, var(--polaris) 8%, transparent), transparent 60%),
+    var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 64px 40px;
+  overflow: hidden;
+}
+
+.cta-title { font-family: var(--font-display); font-size: clamp(1.6rem, 3vw, 2.3rem); font-weight: 600; color: var(--star); margin-bottom: 12px; line-height: 1.3; letter-spacing: -0.02em; }
+.cta-sub { font-family: var(--font-mono); font-size: 0.86rem; color: var(--star-dim); margin-bottom: 0; letter-spacing: 0.02em; }
+
+/* ── Stat Row ── */
+/* Four stats now, not three, so the gap tightens to keep them on one line. */
+.stat-row { display: flex; gap: 30px; flex-wrap: wrap; }
+.stat-item { display: flex; flex-direction: column; gap: 4px; }
+.stat-number { font-family: var(--font-display); font-size: 2.1rem; font-weight: 700; line-height: 1; }
+.stat-label { font-family: var(--font-mono); font-size: 0.68rem; font-weight: 400; color: var(--star-faint); letter-spacing: 0.06em; text-transform: uppercase; }
+
+/* ── Services Page ── */
+.service-number { font-family: var(--font-display); font-size: 3rem; font-weight: 700; line-height: 1; opacity: 0.35; }
+
+.service-visual {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 32px 30px;
+}
+.service-visual.a-nebula  { border-top: 3px solid var(--nebula); }
+.service-visual.a-aurora  { border-top: 3px solid var(--aurora); }
+.service-visual.a-polaris { border-top: 3px solid var(--polaris); }
+.service-visual.a-rose    { border-top: 3px solid var(--rose); }
+.service-visual.a-stellar { border-top: 3px solid var(--stellar); }
+
+.sv-tag { font-family: var(--font-mono); font-size: 0.7rem; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 18px; }
+.sv-items { display: flex; flex-direction: column; }
+.sv-item { font-size: 0.92rem; color: var(--star-dim); padding: 10px 0; border-bottom: 1px solid var(--line-faint); transition: color var(--transition); }
+.sv-item:last-child { border-bottom: none; }
+.sv-item:hover { color: var(--star); }
+
+.service-feature-list { list-style: none; padding: 0; margin: 0; }
+.service-feature-list li {
+  font-size: 0.93rem;
+  color: var(--star-dim);
+  padding: 7px 0 7px 20px;
+  border-bottom: 1px solid var(--line-faint);
+  position: relative;
+}
+.service-feature-list li:last-child { border-bottom: none; }
+.service-feature-list li::before { content: '✦'; position: absolute; left: 0; color: var(--polaris); font-size: 0.7rem; top: 9px; }
+
+/* ── Vision Page ── */
+.mv-card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 38px 32px; height: 100%; }
+.mv-label { font-family: var(--font-mono); font-size: 0.7rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 16px; }
+.mv-text { font-size: 1rem; color: var(--star-dim); line-height: 1.8; margin-bottom: 14px; }
+
+.how-we-work-list { display: flex; flex-direction: column; gap: 16px; }
+/* On the Vision page the steps are cards rather than bare list items, so they
+   borrow the value-card treatment wholesale — accent rails top and bottom,
+   accent rim and glow on hover. Only the number needs saying here: it takes
+   the card's accent rather than a hand-placed colour utility. */
+.hww-card { padding: 22px 24px; }
+.hww-card .hww-num { color: var(--accent, var(--polaris)); }
+.hww-card .hww-body { margin: 0; }
+.hww-item { display: flex; gap: 20px; align-items: flex-start; }
+.hww-num { font-family: var(--font-display); font-size: 1.4rem; font-weight: 700; line-height: 1.2; flex-shrink: 0; width: 38px; }
+.hww-title { font-family: var(--font-display); font-size: 1.05rem; font-weight: 600; color: var(--star); margin-bottom: 6px; }
+.hww-body { font-size: 0.9rem; color: var(--star-dim); line-height: 1.7; margin: 0; }
+
+/* ── Principle Cards (Studio philosophy) ── */
+.principle-card {
+  position: relative;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 36px 26px 26px;
+  height: 100%;
+  overflow: hidden;
+  transition: background var(--transition), transform var(--transition), border-color var(--transition);
+}
+/* Same accent contract as the homepage service cards and the value cards:
+   the card carries the accent, and the rail, rim, glow and title all light in
+   it. The colours used to come from bg-* and c-* utilities, which painted the
+   card but never set --accent — so the hover treatment fell back to gold on
+   all three and matched none of them. */
+.principle-card.a-nebula  { --accent: var(--nebula);  --accent-dim: var(--nebula-dim);  --accent-glow: var(--nebula-glow); }
+.principle-card.a-aurora  { --accent: var(--aurora);  --accent-dim: var(--aurora-dim);  --accent-glow: var(--aurora-glow); }
+.principle-card.a-polaris { --accent: var(--polaris); --accent-dim: var(--polaris-dim); --accent-glow: var(--polaris-glow); }
+.principle-card.a-rose    { --accent: var(--rose);    --accent-dim: var(--rose-dim);    --accent-glow: var(--rose-glow); }
+.principle-card.a-stellar { --accent: var(--stellar); --accent-dim: var(--stellar-dim); --accent-glow: var(--stellar-glow); }
+.principle-card:hover {
+  background: var(--panel-2);
+  transform: translateY(-4px);
+  border-color: var(--accent-glow, var(--line-bright));
+  box-shadow: 0 20px 50px -20px var(--shadow-soft), 0 0 22px -12px var(--accent-glow, var(--polaris-glow));
+}
+.principle-accent {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--accent, var(--polaris)), transparent);
+}
+.principle-title {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+  line-height: 1.3;
+  color: var(--accent, var(--polaris));
+}
+.principle-body { font-size: 0.91rem; color: var(--star-dim); line-height: 1.75; margin-bottom: 18px; }
+/* The phase's steps, drawn as the same chips the Cosmos tool cards use, so
+   the site has one chip vocabulary rather than two. They end the card here,
+   so the margin the Cosmos stack needs beneath them comes back off. */
+.principle-chips { margin-bottom: 0; }
+
+/* ── Value Cards ── */
+/* Same contract as the homepage service cards: the card carries an accent,
+   and everything that lights on hover lights in that accent — rails, rim,
+   glow, icon. Before this the icons were coloured by a utility class while
+   the card's own --accent was never set, so the hover treatment fell back to
+   gold on every card and matched none of them. */
+.value-card {
+  position: relative;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 26px 22px;
+  height: 100%;
+  transition: background var(--transition), transform var(--transition),
+              border-color var(--transition), box-shadow var(--transition);
+}
+.value-card.a-nebula  { --accent: var(--nebula);  --accent-dim: var(--nebula-dim);  --accent-glow: var(--nebula-glow); }
+.value-card.a-aurora  { --accent: var(--aurora);  --accent-dim: var(--aurora-dim);  --accent-glow: var(--aurora-glow); }
+.value-card.a-polaris { --accent: var(--polaris); --accent-dim: var(--polaris-dim); --accent-glow: var(--polaris-glow); }
+.value-card.a-rose    { --accent: var(--rose);    --accent-dim: var(--rose-dim);    --accent-glow: var(--rose-glow); }
+.value-card.a-stellar { --accent: var(--stellar); --accent-dim: var(--stellar-dim); --accent-glow: var(--stellar-glow); }
+
+/* Two rails, top and bottom, fading out at both ends. ::after is already the
+   pointer spotlight, so both rails are drawn as one element here. */
+.value-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--transition);
+  background-image:
+    linear-gradient(90deg, transparent, var(--accent, var(--polaris)), transparent),
+    linear-gradient(90deg, transparent, var(--accent, var(--polaris)), transparent);
+  background-size: 100% 2px, 100% 2px;
+  background-position: top left, bottom left;
+  background-repeat: no-repeat;
+}
+.value-card:hover {
+  background: var(--panel-2);
+  transform: translateY(-3px);
+  border-color: var(--accent-glow, var(--line-bright));
+  box-shadow: 0 18px 44px -24px var(--shadow-soft), 0 0 22px -12px var(--accent-glow, var(--polaris-glow));
+}
+.value-card:hover::before { opacity: 1; }
+
+.value-icon {
+  font-size: 1.3rem;
+  margin-bottom: 12px;
+  display: block;
+  color: var(--accent, var(--polaris));
+  filter: drop-shadow(0 0 10px transparent);
+  transition: filter var(--transition);
+}
+.value-card:hover .value-icon { filter: drop-shadow(0 0 10px var(--accent)); }
+.value-title { font-family: var(--font-display); font-size: 1.04rem; font-weight: 600; color: var(--star); margin-bottom: 8px; line-height: 1.3; }
+.value-body { font-size: 0.87rem; color: var(--star-dim); line-height: 1.7; margin: 0; }
+
+/* ── Belief Block ── */
+.belief-block {
+  position: relative;
+  /* Same accent contract as the tool cards, pinned to the star's own colour:
+     rim, spotlight and lift all light in stellar rather than in gold. */
+  --accent: var(--stellar);
+  --accent-dim: var(--stellar-dim);
+  --accent-glow: var(--stellar-glow);
+  transition: transform var(--transition), border-color var(--transition),
+              background var(--transition), box-shadow var(--transition);
+  background:
+    radial-gradient(60% 100% at 0% 0%, color-mix(in srgb, var(--polaris) 7%, transparent), transparent 55%),
+    var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 42px 44px;
+  text-align: center;
+  overflow: hidden;
+}
+/* The star, not a quotation mark: the straight double quote in Georgia was
+   the only quote ornament anywhere on the site and read as two stray ticks. */
+/* The star's bloom: three stacked haloes rather than one, because a single
+   large shadow reads as fog while a tight core inside a wide falloff reads as
+   a bright point. It brightens with the block on hover, the way a tool card's
+   accent does. */
+.belief-mark {
+  position: relative;
+  display: block;
+  width: 46px;
+  height: 46px;
+  margin: 0 auto 14px;
+  fill: var(--stellar);
+  filter:
+    drop-shadow(0 0 5px var(--stellar-glow))
+    drop-shadow(0 0 14px var(--stellar-glow))
+    drop-shadow(0 0 34px var(--stellar-glow));
+  transition: filter var(--transition), transform var(--transition);
+}
+.belief-block:hover .belief-mark {
+  transform: scale(1.06);
+  filter:
+    drop-shadow(0 0 6px var(--stellar))
+    drop-shadow(0 0 20px var(--stellar-glow))
+    drop-shadow(0 0 48px var(--stellar-glow));
+}
+/* Platinum: the words catch the light from above, brightest at the top edge
+   and cooling as they fall away from it. Built from tokens rather than metal
+   literals, so light mode renders the same idea in graphite instead of
+   inverting into an unreadable pale gradient. */
+.belief-quote {
+  position: relative;
+  z-index: 1;
+  font-family: var(--font-display);
+  font-size: clamp(1.15rem, 2.3vw, 1.5rem);
+  font-weight: 500;
+  font-style: italic;
+  color: var(--star);
+  line-height: 1.5;
+  margin-bottom: 14px;
+  border: none;
+  padding: 0;
+}
+@supports (background-clip: text) or (-webkit-background-clip: text) {
+  .belief-quote {
+    background-image: linear-gradient(
+      175deg,
+      var(--star) 0%,
+      color-mix(in srgb, var(--star) 72%, var(--stellar) 28%) 46%,
+      var(--star-dim) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}
+.belief-block:hover {
+  transform: translateY(-4px);
+  border-color: var(--accent);
+  background:
+    radial-gradient(60% 100% at 0% 0%, color-mix(in srgb, var(--polaris) 7%, transparent), transparent 55%),
+    var(--panel-2);
+  box-shadow: 0 20px 50px -20px var(--shadow-soft), 0 0 26px -14px var(--accent-glow);
+}
+
+.belief-source { font-family: var(--font-mono); font-size: 0.72rem; color: var(--star-faint); letter-spacing: 0.04em; font-style: normal; }
+
+/* ── Pipeline Table (Studio) ── */
+.pipeline-table { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; }
+.pipeline-header { font-family: var(--font-mono); font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--star-faint); padding: 14px 24px; border-bottom: 1px solid var(--line-faint); background: var(--space-2); }
+.pipeline-row { display: grid; grid-template-columns: 150px 110px 1fr; padding: 14px 24px; border-bottom: 1px solid var(--line-faint); align-items: center; transition: background var(--transition); }
+.pipeline-row:last-child { border-bottom: none; }
+.pipeline-row:hover { background: var(--panel-2); }
+.pipeline-layer, .pipeline-status { font-family: var(--font-mono); font-size: 0.85rem; font-weight: 400; letter-spacing: 0.02em; }
+.pipeline-activity { font-size: 0.88rem; color: var(--star-faint); }
+
+/* ── Project Card (Studio featured) ── */
+.project-card { position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-lg); height: 100%; overflow: hidden; transition: background var(--transition), transform var(--transition), box-shadow var(--transition); }
+.project-card:hover { background: var(--panel-2); transform: translateY(-4px); }
+.featured-project { border-color: var(--line-bright); background:
+  radial-gradient(70% 50% at 100% 0%, color-mix(in srgb, var(--aurora) 10%, transparent), transparent 60%), var(--panel); }
+.featured-project:hover { box-shadow: 0 24px 70px -28px color-mix(in srgb, var(--aurora) 40%, transparent); }
+.project-status-badge { background: var(--nebula-dim); color: var(--nebula); border: 1px solid var(--nebula-glow); font-family: var(--font-mono); font-size: 0.66rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; display: inline-block; padding: 4px 14px; border-radius: var(--radius-pill); margin: 22px 0 0 28px; }
+.project-inner { padding: 28px 28px 32px; }
+.project-glyph { font-size: 1.9rem; color: var(--aurora); margin-bottom: 12px; display: block; filter: drop-shadow(0 0 12px var(--aurora-glow)); }
+.project-title { font-family: var(--font-display); font-size: clamp(1.4rem, 2.5vw, 1.8rem); font-weight: 600; color: var(--star); margin-bottom: 6px; letter-spacing: -0.01em; }
+.project-genre { font-family: var(--font-mono); font-size: 0.72rem; font-weight: 400; color: var(--aurora); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 16px; }
+.project-desc { font-size: 0.93rem; color: var(--star-dim); line-height: 1.75; margin-bottom: 20px; }
+.project-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* ── Cosmos: the field ── */
+/* The constellation that replaced the orrery stage. Warpgate is a body in it
+   like every other tool, because its own doctrine says it is never a centre.
+   The figure draws itself on scroll-in and then rests -- nothing to click.
+
+   Every animation here is written so its RESTING state is the finished one:
+   base CSS holds the final values and the keyframes start from the offset.
+   That way the global prefers-reduced-motion rule (which kills animation
+   outright) leaves a complete, legible drawing rather than an empty box. */
+.field-wrap {
+  position: relative;
+  max-width: 940px;
+  margin: 0 auto;
+  padding: 10px 0 4px;
+}
+/* A little depth behind the figure so the stars sit in something. */
+.field-wrap::before {
+  content: '';
+  position: absolute;
+  inset: -6% -4%;
+  pointer-events: none;
+  background:
+    radial-gradient(46% 60% at 32% 42%, var(--aurora-dim), transparent 70%),
+    radial-gradient(40% 56% at 74% 58%, var(--nebula-dim), transparent 70%);
+}
+.field { position: relative; display: block; width: 100%; height: auto; overflow: visible; }
+
+/* Background sky: static specks that twinkle on their own offsets. */
+.field-sky circle { fill: var(--star-faint); opacity: 0.4; animation: fieldTwinkle 5s ease-in-out infinite; animation-delay: var(--d, 0s); }
+@keyframes fieldTwinkle { 0%, 100% { opacity: 0.18; } 50% { opacity: 0.55; } }
+
+/* The figure's lines, drawn one after another rather than all at once. */
+.field-line {
+  stroke: var(--line-bright);
+  stroke-width: 1;
+  stroke-dasharray: 420;
+  stroke-dashoffset: 0;
+}
+.visible .field-line { animation: fieldDraw 0.85s cubic-bezier(0.22, 1, 0.36, 1) backwards; animation-delay: calc(0.15s + var(--s) * 0.26s); }
+@keyframes fieldDraw { from { stroke-dashoffset: 420; } }
+
+.field-star { cursor: pointer; }
+.field-star.a-polaris { --accent: var(--polaris); --accent-dim: var(--polaris-dim); --accent-glow: var(--polaris-glow); }
+.field-star.a-nebula  { --accent: var(--nebula);  --accent-dim: var(--nebula-dim);  --accent-glow: var(--nebula-glow); }
+.field-star.a-aurora  { --accent: var(--aurora);  --accent-dim: var(--aurora-dim);  --accent-glow: var(--aurora-glow); }
+.field-star.a-rose    { --accent: var(--rose);    --accent-dim: var(--rose-dim);    --accent-glow: var(--rose-glow); }
+.field-star.a-stellar { --accent: var(--stellar); --accent-dim: var(--stellar-dim); --accent-glow: var(--stellar-glow); }
+/* A second accent, for a body that is honestly two colours. Defaults to the
+   first, so every other star is unaffected. */
+.field-star { --accent-2: var(--accent, var(--polaris)); --accent-2-glow: var(--accent-glow, var(--polaris-glow)); }
+.field-star.alt-a-polaris { --accent-2: var(--polaris); --accent-2-glow: var(--polaris-glow); }
+.field-star.alt-a-nebula  { --accent-2: var(--nebula);  --accent-2-glow: var(--nebula-glow); }
+.field-star.alt-a-aurora  { --accent-2: var(--aurora);  --accent-2-glow: var(--aurora-glow); }
+.field-star.alt-a-rose    { --accent-2: var(--rose);    --accent-2-glow: var(--rose-glow); }
+.field-star.alt-a-stellar { --accent-2: var(--stellar); --accent-2-glow: var(--stellar-glow); }
+
+/* A star, not a disc: a blurred bloom, a four-point glint over it, and a hot
+   core. The core mixes the accent toward the text colour, so it burns white in
+   the dark theme and reads as a dark star in the light one. */
+.field-bloom {
+  fill: var(--accent, var(--polaris));
+  opacity: 0.34;
+  filter: blur(9px);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: fieldBreathe 6.5s ease-in-out infinite;
+  animation-delay: calc(var(--i) * -0.9s);
+}
+@keyframes fieldBreathe {
+  0%, 100% { transform: scale(0.82); opacity: 0.24; }
+  50%      { transform: scale(1.18); opacity: 0.46; }
+}
+/* Each body is drawn in local coordinates and placed by a transform ATTRIBUTE
+   on its group, so the CSS transforms animating the parts inside cannot fight
+   the positioning. Ink: --accent is the body, --accent-2 its hot parts. */
+.field-object { transition: opacity var(--transition); }
+
+/* Warpgate — a wormhole: rings falling inward through a lit throat. */
+.wh { transform: rotate(-16deg); transform-box: fill-box; transform-origin: center; }
+.wh-ring {
+  fill: none;
+  stroke: var(--accent, var(--polaris));
+  stroke-width: 1.2;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: whFall 4.2s linear infinite;
+}
+.wh-ring:nth-of-type(2) { animation-delay: -1.4s; }
+.wh-ring:nth-of-type(3) { animation-delay: -2.8s; }
+@keyframes whFall {
+  0%   { transform: scale(1.3);  opacity: 0; }
+  18%  { opacity: 0.85; }
+  100% { transform: scale(0.12); opacity: 0; }
+}
+.wh-core {
+  fill: color-mix(in srgb, var(--accent-2, var(--polaris)) 45%, var(--star));
+  filter: drop-shadow(0 0 8px var(--accent-2-glow, var(--polaris-glow)));
+}
+
+/* Compendium — a library: shelved light, spines glowing along the rails. */
+.lib-rail { stroke: var(--accent, var(--polaris)); stroke-width: 1; opacity: 0.5; }
+.lib-spine { fill: var(--accent-2, var(--polaris)); animation: libGlow 5s ease-in-out infinite; }
+.lib-shelf:nth-of-type(2) .lib-spine { animation-delay: -1.6s; }
+.lib-shelf:nth-of-type(3) .lib-spine { animation-delay: -3.2s; }
+.lib-spine:nth-of-type(2n) { animation-duration: 6.4s; }
+.lib-spine:nth-of-type(3n) { animation-duration: 4.1s; }
+@keyframes libGlow { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
+
+/* Astra — a charted star: a plotted route running through it, waypoints lit. */
+.cha-route {
+  fill: none;
+  stroke: var(--accent, var(--polaris));
+  stroke-width: 1.1;
+  opacity: 0.55;
+  stroke-dasharray: 3 5;
+  animation: chaFlow 3s linear infinite;
+}
+@keyframes chaFlow { to { stroke-dashoffset: -16; } }
+.cha-way { fill: var(--accent, var(--polaris)); opacity: 0.8; }
+.cha-glint {
+  fill: var(--accent-2, var(--polaris));
+  filter: drop-shadow(0 0 7px var(--accent-2-glow, var(--polaris-glow)));
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: fieldTwinkleStar 4.6s ease-in-out infinite;
+  animation-delay: calc(var(--i) * -0.7s);
+}
+
+/* DocuTale — a scroll of light: three lines, read in turn. */
+.scr-sheet {
+  fill: color-mix(in srgb, var(--accent, var(--polaris)) 12%, transparent);
+  stroke: var(--accent, var(--polaris));
+  stroke-width: 1.1;
+}
+.scr-curl { fill: none; stroke: var(--accent, var(--polaris)); stroke-width: 1.1; opacity: 0.7; }
+.scr-line {
+  stroke: var(--accent-2, var(--polaris));
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  animation: scrRead 5.2s ease-in-out infinite;
+}
+.scr-line:nth-of-type(2) { animation-delay: 0.5s; }
+.scr-line:nth-of-type(3) { animation-delay: 1s; }
+@keyframes scrRead { 0%, 100% { opacity: 0.35; } 30%, 62% { opacity: 1; } }
+
+/* Afterglow — a fading nebula: violet cloud, amber star still burning in it. */
+.neb-cloud {
+  fill: var(--accent, var(--polaris));
+  opacity: 0.22;
+  filter: blur(5px);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: nebDrift 7.5s ease-in-out infinite;
+}
+.neb-cloud:nth-of-type(2) { animation-delay: -2.4s; }
+.neb-cloud:nth-of-type(3) { animation-delay: -4.8s; }
+@keyframes nebDrift {
+  0%, 100% { transform: scale(0.88); opacity: 0.16; }
+  50%      { transform: scale(1.12); opacity: 0.3; }
+}
+.neb-glint {
+  fill: var(--accent-2, var(--polaris));
+  filter: drop-shadow(0 0 8px var(--accent-2-glow, var(--polaris-glow)));
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: fieldTwinkleStar 4.2s ease-in-out infinite;
+}
+.neb-spark { fill: var(--accent-2, var(--polaris)); animation: libGlow 3.6s ease-in-out infinite; }
+.neb-spark:nth-of-type(2) { animation-delay: -1.2s; }
+.neb-spark:nth-of-type(3) { animation-delay: -2.4s; }
+
+/* Pulsar — the beaming star: two beams sweeping, pulses ringing out. */
+.pul-beams {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pulSweep 13s linear infinite;
+}
+@keyframes pulSweep { to { transform: rotate(360deg); } }
+.pul-beam { fill: var(--accent, var(--polaris)); opacity: 0.16; filter: blur(2.5px); }
+.pul-ring {
+  fill: none;
+  stroke: var(--accent, var(--polaris));
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pulRing 3s ease-out infinite;
+}
+.pul-ring:nth-of-type(2) { animation-delay: 1.5s; }
+@keyframes pulRing {
+  0%   { transform: scale(0.4); opacity: 0.8; }
+  100% { transform: scale(3.2); opacity: 0; }
+}
+.pul-core {
+  fill: color-mix(in srgb, var(--accent-2, var(--polaris)) 45%, var(--star));
+  filter: drop-shadow(0 0 9px var(--accent-2-glow, var(--polaris-glow)));
+}
+
+/* Quartermaster — cosmic tools: a spanner and a driver, crossed, turning. */
+.qmt {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: qmtTurn 9s ease-in-out infinite;
+}
+@keyframes qmtTurn { 0%, 100% { transform: rotate(-3.5deg); } 50% { transform: rotate(3.5deg); } }
+.qmt-tool { stroke: var(--accent, var(--polaris)); stroke-width: 3.4; stroke-linecap: round; }
+.qmt-tool.driver { stroke-width: 2.4; opacity: 0.85; }
+.qmt-head { fill: none; stroke: var(--accent, var(--polaris)); stroke-width: 2; }
+.qmt-grip { fill: var(--accent, var(--polaris)); opacity: 0.85; }
+.qmt-bolt {
+  fill: var(--accent-2, var(--polaris));
+  filter: drop-shadow(0 0 6px var(--accent-glow, var(--polaris-glow)));
+}
+
+.field-label {
+  fill: var(--star-dim);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  transition: fill var(--transition);
+}
+/* What is still on the horizon reads as a fainter star, matching its card. */
+.field-star.is-horizon .field-object { opacity: 0.62; }
+.field-star.is-horizon .field-bloom { opacity: 0.2; }
+.field-star.is-horizon .field-label { fill: var(--star-faint); }
+
+.field-star:hover .field-label,
+.field-star:focus-visible .field-label { fill: var(--star); }
+.field-star:hover .field-bloom { opacity: 0.55; }
+.field-star:hover .field-object { opacity: 1; }
+
+/* The label and the core fade in once the line reaching that star is drawn;
+   the bloom and glint keep their own idle loops rather than being restarted. */
+.visible .field-object,
+.visible .field-label {
+  animation: fieldPop 0.6s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  animation-delay: calc(0.35s + var(--i) * 0.2s);
+}
+@keyframes fieldPop { from { opacity: 0; } }
+
+.field-legend {
+  margin: 20px auto 0;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  color: var(--star-dim);
+}
+
+/* ── Cosmos: tool cards ── */
+/* One column, so each card is a split: the reading column on the left, the
+   tool's motif in its own well on the right. At this width the motif is a
+   third of the card rather than a decorative strip, which is the point -- the
+   drawing carries what the tool does, and the words stop having to.
+
+   row-reverse puts the motif on the right while keeping it first in the DOM,
+   so the mobile stack (flex-direction: column) leads with it and needs no
+   ordering tricks. */
+.tool-stack { display: flex; flex-direction: column; gap: 20px; }
+
+.tool-card {
+  position: relative;
+  /* The field's bodies link to these cards, and the navbar is fixed — without
+     this the anchor lands under it. Matches .chart-year on the Star Chart. */
+  scroll-margin-top: 96px;
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: center;
+  gap: 30px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 28px 30px;
+  overflow: hidden;
+  transition: transform var(--transition), border-color var(--transition),
+              background var(--transition), box-shadow var(--transition);
+}
+.tool-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--accent);
+  background: var(--panel-2);
+}
+/* Above the pointer-spotlight ::after, so the glow tints the card and not
+   the words. */
+.tool-body { flex: 1 1 auto; min-width: 0; position: relative; z-index: 1; }
+.tool-card.a-polaris { --accent: var(--polaris); --accent-dim: var(--polaris-dim); --accent-glow: var(--polaris-glow); }
+.tool-card.a-nebula  { --accent: var(--nebula);  --accent-dim: var(--nebula-dim);  --accent-glow: var(--nebula-glow); }
+.tool-card.a-aurora  { --accent: var(--aurora);  --accent-dim: var(--aurora-dim);  --accent-glow: var(--aurora-glow); }
+.tool-card.a-rose    { --accent: var(--rose);    --accent-dim: var(--rose-dim);    --accent-glow: var(--rose-glow); }
+.tool-card.a-stellar { --accent: var(--stellar); --accent-dim: var(--stellar-dim); --accent-glow: var(--stellar-glow); }
+.tool-card { --accent-2: var(--accent, var(--polaris)); }
+.tool-card.alt-a-polaris { --accent-2: var(--polaris); }
+.tool-card.alt-a-nebula  { --accent-2: var(--nebula); }
+.tool-card.alt-a-aurora  { --accent-2: var(--aurora); }
+.tool-card.alt-a-rose    { --accent-2: var(--rose); }
+.tool-card.alt-a-stellar { --accent-2: var(--stellar); }
+
+/* The motif's well: a soft accent pool rather than a boxed panel, so the card
+   keeps one surface. */
+.tool-scene {
+  flex: 0 0 clamp(230px, 32%, 330px);
+  position: relative;
+  padding: 16px 14px;
+  border-radius: var(--radius);
+  background: radial-gradient(72% 88% at 50% 50%, var(--accent-dim, var(--polaris-dim)), transparent 72%);
+}
+.tool-motif { display: block; width: 100%; height: auto; }
+
+.tool-head { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+.tool-icon { width: 60px; height: 60px; display: block; flex: none; }
+.tool-name {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--star);
+  line-height: 1.1;
+  margin: 0 0 3px;
+}
+.tool-role {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent, var(--polaris));
+}
+.tool-blurb {
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: var(--star-dim);
+  margin: 0 0 18px;
+  max-width: 46ch;
+}
+
+.tool-chips { display: flex; flex-wrap: wrap; gap: 7px; list-style: none; padding: 0; margin: 0 0 20px; }
+.tool-chips li {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.02em;
+  color: var(--star-dim);
+  background: var(--tag-fill);
+  border: 1px solid var(--line-faint);
+  padding: 4px 10px;
+  border-radius: 7px;
+}
+
+.tool-foot {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.tool-status {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--star-faint);
+}
+.tool-status .dot {
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--accent, var(--polaris));
+  box-shadow: 0 0 8px var(--accent-glow, var(--polaris-glow));
+  margin-right: 7px;
+  vertical-align: middle;
+}
+/* Card actions. The shelf link is built like a shelf: the button's bottom
+   border is the board, and the spines stand on it. One spine is pulled out on
+   hover, the way you take a book down. */
+.tool-actions { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+
+.tool-shelf,
+.tool-repo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 7px 13px;
+  border: 1px solid var(--line-bright);
+  background: var(--tag-fill);
+  transition: color var(--transition), background var(--transition),
+              border-color var(--transition), transform var(--transition);
+}
+
+.tool-shelf {
+  color: var(--accent, var(--polaris));
+  border-bottom: 3px solid var(--accent, var(--polaris));
+  border-radius: 8px 8px 3px 3px;
+}
+.tool-shelf:hover {
+  background: var(--accent-dim, var(--polaris-dim));
+  color: var(--star);
+  transform: translateY(-2px);
+}
+.shelf-glyph { width: 24px; height: auto; flex: none; overflow: visible; }
+.shelf-glyph .spine {
+  fill: var(--accent, var(--polaris));
+  transform-box: fill-box;
+  transform-origin: bottom left;
+  transition: transform var(--transition), opacity var(--transition);
+}
+.shelf-glyph .spine:nth-of-type(2n) { opacity: 0.68; }
+.shelf-glyph .plank { fill: var(--accent, var(--polaris)); opacity: 0.55; }
+.tool-shelf:hover .shelf-glyph .tip { transform: rotate(14deg) translate(-1px, -1px); opacity: 1; }
+
+.tool-repo {
+  color: var(--star-dim);
+  border-radius: 8px;
+}
+.tool-repo svg { width: 14px; height: 14px; flex: none; }
+.tool-repo:hover {
+  color: var(--star);
+  border-color: var(--star-faint);
+  transform: translateY(-2px);
+}
+
+/* Status carries weight now: what is still on the horizon reads as such
+   instead of looking identical to what runs today. */
+.tool-card.is-horizon { border-style: dashed; }
+.tool-card.is-horizon .tool-motif { opacity: 0.5; }
+.tool-card.is-horizon .tool-status .dot { background: var(--star-faint); box-shadow: none; }
+
+/* ── Cosmos: tool motifs ── */
+/* Shared ink: --accent is the tool, --accent-2 its hot parts. Each motif is
+   the same object the constellation draws that tool as, put to work. */
+.tool-motif [class^="m"] { transition: opacity var(--transition); }
+
+/* Warpgate — roles fall through the wormhole and arrive provisioned. */
+.mw-manifest circle { fill: var(--accent, var(--polaris)); opacity: 0.3; }
+.mw-rings { transform: rotate(-9deg); transform-box: fill-box; transform-origin: center; }
+.mw-ring {
+  fill: none;
+  stroke: var(--accent, var(--polaris));
+  stroke-width: 1.2;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.visible .mw-ring { animation: mwFall 4.4s linear infinite; }
+.visible .mw-ring:nth-of-type(2) { animation-delay: -1.5s; }
+.visible .mw-ring:nth-of-type(3) { animation-delay: -3s; }
+@keyframes mwFall {
+  0%   { transform: scale(1.25); opacity: 0; }
+  20%  { opacity: 0.8; }
+  100% { transform: scale(0.14); opacity: 0; }
+}
+.mw-core {
+  fill: color-mix(in srgb, var(--accent-2, var(--polaris)) 45%, var(--star));
+  filter: drop-shadow(0 0 7px var(--accent-2-glow, var(--polaris-glow)));
+}
+.mw-token rect { fill: var(--accent-2, var(--polaris)); }
+.mw-token { transform-box: fill-box; transform-origin: center; }
+.mw-token.t1 { transform: translate(44px, 40px); }
+.mw-token.t2 { transform: translate(58px, 33px); }
+.mw-token.t3 { transform: translate(72px, 30px); }
+.visible .mw-token { animation: mwEnter 5.2s ease-in infinite; }
+.visible .mw-token.t2 { animation-delay: -1.7s; }
+.visible .mw-token.t3 { animation-delay: -3.4s; }
+@keyframes mwEnter {
+  0%   { transform: translate(34px, 44px) scale(1);    opacity: 0; }
+  16%  { opacity: 1; }
+  78%  { opacity: 1; }
+  100% { transform: translate(88px, 30px) scale(0.15); opacity: 0; }
+}
+
+/* Astra — the canon charted as a route between decisions. */
+.ma-route { stroke: var(--accent, var(--polaris)); stroke-width: 1.4; stroke-dasharray: 130; stroke-dashoffset: 0; opacity: 0.75; }
+.visible .ma-route { animation: maDraw 1.8s ease-out backwards 0.1s; }
+@keyframes maDraw { from { stroke-dashoffset: 130; } }
+.ma-node { fill: var(--accent-2, var(--polaris)); }
+.visible .ma-node { animation: motifPop 0.5s ease-out backwards; }
+.visible .ma-node:nth-of-type(1) { animation-delay: 0.25s; }
+.visible .ma-node:nth-of-type(2) { animation-delay: 0.6s; }
+.visible .ma-node:nth-of-type(3) { animation-delay: 0.95s; }
+.visible .ma-node:nth-of-type(4) { animation-delay: 1.3s; }
+.visible .ma-node:nth-of-type(5) { animation-delay: 1.65s; }
+.ma-sweep { fill: var(--accent, var(--polaris)); opacity: 0.22; offset-path: path("M12,46 L34,28 L58,38 L82,16 L106,26"); }
+.visible .ma-sweep { animation: maSweep 7s ease-in-out infinite 2s; }
+@keyframes maSweep {
+  0%, 100% { offset-distance: 0%;   opacity: 0; }
+  12%      { opacity: 0.22; }
+  88%      { opacity: 0.22; }
+  99%      { offset-distance: 100%; opacity: 0; }
+}
+
+/* DocuTale — a dense document distilled into a scroll of light. */
+.md-dense rect { fill: var(--star-faint); opacity: 0.45; }
+/* The source never settles: after the thinning pass, a slow shimmer keeps
+   running down the dense block, so the left half of the scene stays alive.
+   The per-line phase is handed in as --i from the markup; the 1.3s floor
+   keeps the loop from cutting the thinning short. */
+.visible .md-dense rect {
+  animation:
+    mdThin 1.2s ease-out backwards,
+    mdSource 6s ease-in-out infinite calc(1.3s + var(--i, 0) * 0.22s);
+}
+@keyframes mdThin { from { opacity: 0.9; } }
+@keyframes mdSource { 0%, 100% { opacity: 0.26; } 45% { opacity: 0.52; } }
+.md-arrow { stroke: var(--accent, var(--polaris)); stroke-width: 1.4; stroke-dasharray: 30; stroke-dashoffset: 0; }
+.visible .md-arrow { animation: mdArrow 0.7s ease-out backwards 0.45s; }
+@keyframes mdArrow { from { stroke-dashoffset: 30; } }
+.md-sheet {
+  fill: color-mix(in srgb, var(--accent, var(--polaris)) 12%, transparent);
+  stroke: var(--accent, var(--polaris));
+  stroke-width: 1.1;
+}
+.md-curl { fill: none; stroke: var(--accent, var(--polaris)); stroke-width: 1.1; opacity: 0.7; }
+/* The distillation itself, looping: a spark carries off the dense block,
+   crosses the arrow, and lands in the scroll. Same 5.2s period as the kept
+   lines below, so the lines light just behind its arrival instead of
+   blinking on a clock of their own. */
+.md-spark {
+  fill: var(--accent-2, var(--polaris));
+  filter: drop-shadow(0 0 5px var(--accent-glow, var(--polaris-glow)));
+  offset-path: path("M46,30 L72,30");
+  offset-rotate: 0deg;
+  opacity: 0;
+}
+.visible .md-spark { animation: mdFlow 5.2s ease-in-out infinite 0.9s; }
+@keyframes mdFlow {
+  0%        { offset-distance: 0%;   opacity: 0; }
+  10%       { opacity: 1; }
+  32%       { offset-distance: 100%; opacity: 1; }
+  42%, 100% { offset-distance: 100%; opacity: 0; }
+}
+.md-kept { stroke: var(--accent-2, var(--polaris)); stroke-width: 2; stroke-linecap: round; }
+.visible .md-kept { animation: mdRead 5.2s ease-in-out infinite 1s; }
+.visible .md-kept:nth-of-type(2) { animation-delay: 1.3s; }
+.visible .md-kept:nth-of-type(3) { animation-delay: 1.6s; }
+@keyframes mdRead { 0%, 100% { opacity: 0.4; } 30%, 62% { opacity: 1; } }
+
+/* Afterglow — the reel-worthy frames picked out of the strip, in the nebula. */
+.mg-neb circle {
+  fill: var(--accent, var(--polaris));
+  opacity: 0.18;
+  filter: blur(7px);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.visible .mg-neb circle { animation: mgDrift 7.5s ease-in-out infinite; }
+.visible .mg-neb circle:nth-of-type(2) { animation-delay: -3.2s; }
+@keyframes mgDrift {
+  0%, 100% { transform: scale(0.88); opacity: 0.12; }
+  50%      { transform: scale(1.12); opacity: 0.26; }
+}
+.mg-frame { fill: none; stroke: var(--line-bright); stroke-width: 1; }
+.mg-frame.picked {
+  stroke: var(--accent-2, var(--polaris));
+  fill: color-mix(in srgb, var(--accent-2, var(--polaris)) 16%, transparent);
+  transform: translateY(-3px);
+}
+/* Picked on arrival, then kept warm: each chosen frame takes its turn
+   glowing, so the strip reads as a reel still being watched. Both delays
+   come from --f (the frame's place on the strip) because a shorthand delay
+   here would apply to both animations. mgGlow leaves transform alone, so
+   the lifted position the pick ends on survives it. */
+.visible .mg-frame.picked {
+  animation:
+    mgPick 0.6s cubic-bezier(0.22, 1, 0.36, 1) backwards calc(0.5s + var(--f, 0) * 0.13s),
+    mgGlow 4.2s ease-in-out infinite calc(1.6s + var(--f, 0) * 0.34s);
+}
+@keyframes mgPick { from { transform: translateY(0); stroke: var(--line-bright); fill: transparent; } }
+@keyframes mgGlow {
+  0%, 55%, 100% { opacity: 0.72; filter: none; }
+  20%           { opacity: 1; filter: drop-shadow(0 0 7px var(--accent-glow, var(--polaris-glow))); }
+}
+.mg-perf rect { fill: var(--star-faint); opacity: 0.35; }
+/* The strip is running. One pitch of travel, looped — the row is drawn two
+   sprockets long of the viewBox so the seam never shows. */
+.mg-perf { transform-box: fill-box; }
+.visible .mg-perf { animation: mgRun 1.9s linear infinite; }
+@keyframes mgRun { to { transform: translateX(-9.4px); } }
+
+/* Pulsar — a timing signature, read and named. */
+.mp-trace { stroke: var(--accent, var(--polaris)); stroke-width: 1.4; stroke-dasharray: 340; stroke-dashoffset: 0; }
+.visible .mp-trace { animation: mpDraw 2s ease-out backwards; }
+@keyframes mpDraw { from { stroke-dashoffset: 340; } }
+.mp-base { stroke: var(--line); stroke-width: 1; stroke-dasharray: 3 5; }
+.mp-beat {
+  fill: var(--accent-2, var(--polaris));
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.visible .mp-beat { animation: mpBeat 3.4s ease-out infinite; }
+.visible .mp-beat:nth-of-type(2) { animation-delay: 0.35s; }
+.visible .mp-beat:nth-of-type(3) { animation-delay: 0.7s; }
+@keyframes mpBeat {
+  0%        { transform: scale(1);   opacity: 0.85; }
+  8%        { transform: scale(1.6); opacity: 1; }
+  30%, 100% { transform: scale(1);   opacity: 0.55; }
+}
+.mp-pulse {
+  fill: none;
+  stroke: var(--accent, var(--polaris));
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  transform-box: fill-box;
+  transform-origin: center;
+  opacity: 0;
+}
+.visible .mp-pulse { animation: mpRing 3.4s ease-out infinite; }
+.visible .mp-pulse:nth-of-type(2) { animation-delay: 1.7s; }
+@keyframes mpRing {
+  0%   { transform: scale(0.5); opacity: 0.7; }
+  100% { transform: scale(4.2); opacity: 0; }
+}
+
+/* Compendium — a library of shelved light, filling by capability. */
+.mc-sky circle { fill: var(--star-faint); opacity: 0.45; }
+.mc-rail { stroke: var(--accent, var(--polaris)); stroke-width: 1; opacity: 0.55; }
+.mc-book {
+  fill: var(--accent-2, var(--polaris));
+  opacity: 0.7;
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+/* Two loops on the one element: the shelving-in when the card arrives, then
+   the lamp — a light that keeps travelling the shelves, so the library is
+   never a still. Both delays are handed in per book (--pop, --lamp) from the
+   markup; --lamp starts after the last book is shelved so the sweep never
+   cuts an arrival short. */
+.visible .mc-book {
+  animation:
+    motifPop 0.55s ease-out backwards var(--pop, 0.2s),
+    mcLamp 5.6s ease-in-out infinite var(--lamp, 1.5s);
+}
+@keyframes mcLamp {
+  0%, 24%, 100% { opacity: 0.52; transform: scaleY(1); }
+  9%            { opacity: 1;    transform: scaleY(1.09); }
+}
+
+/* Quartermaster — tools floating free of any locker, each one portable. */
+.mq-rig { transform-box: fill-box; transform-origin: center; }
+.visible .mq-rig { animation: mqTurn 9s ease-in-out infinite; }
+@keyframes mqTurn { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+.mq-tool { stroke: var(--accent, var(--polaris)); stroke-width: 4; stroke-linecap: round; }
+.mq-tool.mq-driver { stroke-width: 2.8; opacity: 0.85; }
+.mq-head { fill: none; stroke: var(--accent, var(--polaris)); stroke-width: 2.2; }
+.mq-grip { fill: var(--accent, var(--polaris)); opacity: 0.85; }
+.mq-bolt {
+  fill: var(--accent-2, var(--polaris));
+  filter: drop-shadow(0 0 6px var(--accent-glow, var(--polaris-glow)));
+}
+.mq-float rect {
+  fill: color-mix(in srgb, var(--accent, var(--polaris)) 18%, transparent);
+  stroke: var(--accent, var(--polaris));
+  stroke-width: 1;
+}
+.visible .mq-float { animation: mqBob 4.6s ease-in-out infinite; }
+.visible .mq-float.f2 { animation-delay: -1.5s; animation-duration: 5.4s; }
+.visible .mq-float.f3 { animation-delay: -3s; animation-duration: 4.1s; }
+@keyframes mqBob { 0%, 100% { transform: translateY(2px); } 50% { transform: translateY(-3px); } }
+
+
+@keyframes motifPop { from { opacity: 0; } }
+
+@media (max-width: 767px) {
+  /* Labels in a 900-wide figure do not survive a phone, but the drawing does;
+     the cards below carry the names. */
+  .field-label { display: none; }
+  .field-legend { font-size: 0.76rem; }
+  .tool-card { flex-direction: column; align-items: stretch; gap: 18px; padding: 24px 22px; }
+  .tool-scene { flex: none; }
+  .tool-icon { width: 52px; height: 52px; }
+  .tool-blurb { font-size: 1rem; }
+}
+
+/* ── Contact Page ── */
+/* No form: the contact page routes through mailto: links with the subject
+   pre-set, so there is no third-party form backend and no spam funnel. */
+.topic-link {
+  display: flex; align-items: center; gap: 12px;
+  width: 100%; height: 100%;
+  background: var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--star-dim);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  padding: 14px 16px;
+  text-decoration: none;
+  transition: border-color var(--transition), color var(--transition),
+              background var(--transition);
+}
+.topic-link:hover, .topic-link:focus-visible {
+  border-color: var(--accent, var(--polaris));
+  color: var(--star);
+  background: var(--accent-dim, var(--polaris-dim));
+}
+.topic-glyph { color: var(--accent, var(--polaris)); font-size: 1.05rem; line-height: 1; }
+
+/* Topic accents, matching the homepage service cards one for one. */
+.topic-link.a-nebula  { --accent: var(--nebula);  --accent-dim: var(--nebula-dim); }
+.topic-link.a-aurora  { --accent: var(--aurora);  --accent-dim: var(--aurora-dim); }
+.topic-link.a-polaris { --accent: var(--polaris); --accent-dim: var(--polaris-dim); }
+.topic-link.a-rose    { --accent: var(--rose);    --accent-dim: var(--rose-dim); }
+.topic-link.a-stellar { --accent: var(--stellar); --accent-dim: var(--stellar-dim); }
+.topic-link.a-comet   { --accent: var(--comet);   --accent-dim: var(--comet-dim); }
+.topic-link.a-ember   { --accent: var(--ember);   --accent-dim: var(--ember-dim); }
+
+.contact-info-item { margin-bottom: 28px; }
+.ci-label { font-family: var(--font-mono); font-size: 0.7rem; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 6px; }
+.ci-value { font-size: 0.97rem; color: var(--star-dim); display: block; min-height: 24px; transition: color var(--transition); }
+a.ci-value:hover { color: var(--star); }
+
+.social-link-lg { font-family: var(--font-mono); font-size: 0.76rem; font-weight: 400; letter-spacing: 0.04em; color: var(--star-faint); border: 1px solid var(--line-faint); padding: 6px 14px; border-radius: 8px; transition: color var(--transition), border-color var(--transition), background var(--transition); }
+.social-link-lg:hover { color: var(--star); border-color: var(--polaris); background: var(--polaris-dim); }
+.contact-note { font-size: 0.85rem; color: var(--star-faint); line-height: 1.6; }
+
+/* ── Footer ── */
+.site-footer { background: var(--veil-deep); border-top: 1px solid var(--line-faint); }
+.footer-brand { font-family: var(--font-display); font-size: 1.05rem; font-weight: 700; letter-spacing: 0.01em; display: inline-flex; align-items: center; gap: 8px; }
+.footer-tagline { font-family: var(--font-mono); font-size: 0.76rem; color: var(--star-faint); margin-bottom: 0; line-height: 1.6; }
+.footer-social { display: flex; gap: 12px; }
+.social-link { display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; font-family: var(--font-mono); font-size: 0.7rem; font-weight: 400; text-transform: lowercase; color: var(--star-faint); border: 1px solid var(--line-faint); border-radius: 8px; transition: color var(--transition), border-color var(--transition), background var(--transition); }
+.social-link:hover { color: var(--star); border-color: var(--line); background: var(--panel); }
+.footer-heading { font-family: var(--font-mono); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--star-faint); margin-bottom: 16px; }
+.footer-links { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+/* Vertical padding here is a tap-target requirement, not spacing taste: the
+   bare text line measured 17px tall, under the 24px WCAG 2.5.8 minimum. */
+.footer-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 2px 0;
+  font-size: 0.88rem;
+  color: var(--star-dim);
+  transition: color var(--transition);
+}
+.footer-links a:hover { color: var(--star); }
+.footer-bottom { border-top: 1px solid var(--line-faint); padding: 20px 0; }
+.footer-bottom p { font-family: var(--font-mono); font-size: 0.74rem; color: var(--star-faint); margin: 0; text-align: center; }
+
+/* ── Pointer spotlight ──
+   js/app.js sets --mx/--my on whichever card the pointer is over; the glow
+   follows it. Painted as an overlay pseudo-element -- ::before or ::after,
+   whichever the card has not already spent -- with pointer-events none and a
+   low-alpha accent so text stays readable beneath it. Hover-only by
+   construction: the JS never binds on touch devices, and opacity rests at 0.
+   The accent *-dim tokens are theme-aware, so light mode gets its darkened
+   accents automatically. */
+.value-card, .principle-card { position: relative; }
+.service-card::before,
+.value-card::after,
+.principle-card::after,
+.project-card::before,
+.belief-block::after,
+.tool-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.45s ease;
+  background: radial-gradient(
+    300px circle at var(--mx, 50%) var(--my, 50%),
+    var(--accent-dim, var(--polaris-dim)),
+    transparent 70%
+  );
+}
+.service-card:hover::before,
+.value-card:hover::after,
+.principle-card:hover::after,
+.project-card:hover::before,
+.belief-block:hover::after,
+.tool-card:hover::after { opacity: 1; }
+
+/* The dim token is per-accent only where the card family defines it. */
+.service-card.a-nebula  { --accent-dim: var(--nebula-dim); }
+.service-card.a-aurora  { --accent-dim: var(--aurora-dim); }
+.service-card.a-polaris { --accent-dim: var(--polaris-dim); }
+.service-card.a-rose    { --accent-dim: var(--rose-dim); }
+.service-card.a-stellar { --accent-dim: var(--stellar-dim); }
+
+/* ── Star Chart (titles) ── */
+/* The voyage button: a capsule window into space. The scene is an inline
+   SVG (stars, a dashed course, a ship on an animateMotion loop along that
+   course); everything colours through tokens so both themes work. */
+.chart-voyage {
+  position: relative;
+  display: inline-block;
+  width: min(460px, 100%);
+  height: 64px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  background:
+    radial-gradient(70% 120% at 15% 0%, var(--aurora-dim), transparent 60%),
+    radial-gradient(60% 120% at 85% 100%, var(--nebula-dim), transparent 60%),
+    var(--space-2);
+  transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition);
+}
+.chart-voyage:hover {
+  border-color: var(--polaris-glow);
+  transform: translateY(-2px);
+  box-shadow: 0 14px 40px -18px var(--shadow-soft), 0 0 24px -6px var(--polaris-glow);
+}
+
+.voyage-scene {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* The plotted course: dashes flow along the route the ship flies. */
+.voyage-course {
+  fill: none;
+  stroke: var(--polaris);
+  stroke-width: 1;
+  opacity: 0.45;
+  stroke-dasharray: 4 7;
+  animation: courseFlow 2.6s linear infinite;
+}
+.chart-voyage:hover .voyage-course { opacity: 0.8; animation-duration: 1.1s; }
+@keyframes courseFlow { to { stroke-dashoffset: -11; } }
+
+.voyage-stars circle { fill: var(--star-faint); animation: voyageTwinkle 3.4s ease-in-out infinite; }
+.voyage-stars circle:nth-child(odd) { animation-delay: -1.7s; }
+.voyage-stars circle:nth-child(3n) { animation-delay: -0.9s; animation-duration: 4.1s; }
+.voyage-stars .waypoint { fill: var(--polaris); }
+@keyframes voyageTwinkle { 0%, 100% { opacity: 0.35; } 50% { opacity: 0.95; } }
+
+.voyage-ship path {
+  fill: var(--star);
+  filter: drop-shadow(0 0 3px var(--polaris-glow));
+}
+.chart-voyage:hover .voyage-ship path { fill: var(--polaris-bright); filter: drop-shadow(0 0 6px var(--polaris-glow)); }
+
+.voyage-text {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 100%;
+  padding: 0 24px;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--star);
+  text-shadow: 0 1px 8px var(--shadow-hard);
+}
+.voyage-arrow { transition: transform var(--transition); }
+.chart-voyage:hover .voyage-arrow { transform: translateX(4px); }
+
+@media (prefers-reduced-motion: reduce) {
+  /* SMIL ignores CSS animation rules, so the ship is simply hidden; the
+     static course and stars still tell the story. */
+  .voyage-ship { display: none; }
+  .voyage-course, .voyage-stars circle { animation: none !important; }
+}
+
+.chart-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 46px;
+}
+.chart-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--star-dim);
+  background: var(--tag-fill);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  padding: 7px 16px;
+  min-height: 32px;
+  cursor: pointer;
+  transition: color var(--transition), border-color var(--transition), background var(--transition);
+}
+.chart-filter-btn:hover { color: var(--star); border-color: var(--line-bright); }
+.chart-filter-btn.active {
+  color: var(--polaris);
+  border-color: var(--polaris-glow);
+  background: var(--polaris-dim);
+}
+.chart-filter-btn svg { width: 13px; height: 13px; display: block; fill: currentColor; }
+.chart-filter-glyph { font-size: 0.7rem; line-height: 1; }
+
+.chart-year { margin-bottom: 46px; }
+.chart-year.filtered-out { display: none; }
+.chart-year-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.chart-year-star { color: var(--polaris); font-size: 0.8rem; filter: drop-shadow(0 0 8px var(--polaris-glow)); }
+.chart-year-label {
+  font-family: var(--font-mono);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--star);
+}
+.chart-year-line { flex: 1; height: 1px; background: linear-gradient(90deg, var(--line-bright), transparent); }
+
+.chart-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+@media (max-width: 991.98px) { .chart-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 575.98px) { .chart-grid { grid-template-columns: 1fr; } }
+
+.chart-card {
+  background: var(--card-fill);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 20px;
+  transition: transform var(--transition), border-color var(--transition), background var(--transition);
+}
+.chart-card:hover { transform: translateY(-3px); border-color: var(--line-bright); background: var(--card-fill-hover); }
+.chart-card.filtered-out { display: none; }
+.chart-card-title {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--star);
+  margin-bottom: 4px;
+}
+.chart-card-partner {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--polaris);
+  margin-bottom: 10px;
+}
+.chart-card-note { font-size: 0.84rem; color: var(--star-dim); line-height: 1.6; margin-bottom: 10px; }
+.chart-card-platforms { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* Platform brand marks. The colour hangs off the attribute rather than off a
+   component, so any pill or tag carrying data-brand paints with it and the
+   two rows on this page share one vocabulary. These are the vendors' own
+   marks — documented invariants, not palette tokens, which is why they sit
+   outside the theme blocks. Only the two that fail on a light ground are
+   restated there. */
+[data-brand="windows"]        { --brand: #0078d4; }
+[data-brand="xbox"]           { --brand: #107c10; }
+[data-brand="playstation"]    { --brand: #0070d1; }
+[data-brand="android"]        { --brand: #3ddc84; }
+[data-brand="nintendoswitch"] { --brand: #e60012; }
+[data-brand="vr"]             { --brand: var(--nebula); }
+
+.chart-filter-btn svg { color: var(--brand, currentColor); }
+.chart-filter-btn.active svg { color: currentColor; }
+
+/* A platform tag is a real link when that platform has a store page, and a
+   dotted, dimmed chip when it does not. The shape says which before the
+   cursor gets a chance to. */
+.chart-card-platforms .tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+}
+.chart-card-platforms .tag svg {
+  width: 12px;
+  height: 12px;
+  display: block;
+  flex: none;
+  fill: currentColor;
+}
+.tag-live { color: var(--star-dim); }
+.tag-live svg { color: var(--brand, currentColor); }
+.tag-live:hover {
+  color: var(--star);
+  border-color: color-mix(in srgb, var(--brand, var(--polaris)) 50%, transparent);
+  background: color-mix(in srgb, var(--brand, var(--polaris)) 12%, var(--panel-2));
+}
+
+/* Not shipped, or shipped with no public store page: dotted rather than
+   solid, and under a scrim of the page's own ground so it reads as a fact
+   about the title, not as a link that failed. */
+.tag-pending {
+  position: relative;
+  border-style: dotted;
+  border-color: var(--line-bright);
+  color: var(--star-faint);
+  cursor: default;
+}
+.tag-pending svg { color: var(--star-faint); }
+.tag-pending::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--space);
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* Lite video embed: thumbnail + play glyph until clicked, then the iframe.
+   16:9 either way; the thumbnail is centre-cropped from YouTube's 4:3. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) [data-brand="android"]        { --brand: #1e8e4e; }
+  :root:not([data-theme="dark"]) [data-brand="nintendoswitch"] { --brand: #c00010; }
+}
+:root[data-theme="light"] [data-brand="android"]        { --brand: #1e8e4e; }
+:root[data-theme="light"] [data-brand="nintendoswitch"] { --brand: #c00010; }
+
+.chart-video {
+  display: block;
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  margin-bottom: 14px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: calc(var(--radius) - 4px);
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--space-2);
+}
+.chart-video img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform var(--transition), opacity var(--transition);
+  opacity: 0.85;
+}
+.chart-video:hover img { transform: scale(1.04); opacity: 1; }
+.chart-video iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+/* The play control sits on video thumbnail imagery, which is whatever the
+   trailer is -- not a themed surface. Fixed dark scrim and white glyph stay
+   correct over any footage in either theme. */
+.chart-video-play {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  pointer-events: none;
+}
+.chart-video-play svg {
+  width: 46px;
+  height: 46px;
+  padding: 11px 9px 11px 13px;
+  border-radius: 50%;
+  background: rgba(4, 4, 12, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  transition: background var(--transition), transform var(--transition);
+}
+.chart-video:hover .chart-video-play svg {
+  background: rgba(4, 4, 12, 0.8);
+  transform: scale(1.08);
+}
+
+/* Store icon links */
+.chart-card-links {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line-faint);
+}
+.chart-store-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--star-dim);
+  transition: color var(--transition), border-color var(--transition), background var(--transition);
+}
+.chart-store-link:hover {
+  color: var(--polaris);
+  border-color: var(--polaris-glow);
+  background: var(--polaris-dim);
+}
+.chart-store-link svg { width: 15px; height: 15px; display: block; }
+
+/* Year rail: a fixed constellation spine on the right, desktop only. Links
+   scroll to their year; the active dot tracks reading position; filtered
+   years drop off the rail. */
+.year-rail {
+  position: fixed;
+  right: 22px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 900;
+  display: none;
+  flex-direction: column;
+  gap: 14px;
+  padding: 8px 0;
+}
+@media (min-width: 1200px) { .year-rail { display: flex; } }
+.year-rail-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 4px;
+  width: 1px;
+  background: linear-gradient(180deg, transparent, var(--line-bright), transparent);
+}
+.year-rail-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 9px;
+  min-height: 24px;
+  text-decoration: none;
+}
+.year-rail-link.filtered-out { display: none; }
+/* Labels stay visible: a bare dot column read as decoration, not as a
+   year timeline. */
+.year-rail-label {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  color: var(--star-faint);
+  transition: color var(--transition);
+}
+.year-rail-link:hover .year-rail-label { color: var(--star-dim); }
+.year-rail-link.active .year-rail-label { color: var(--polaris); }
+.year-rail-cap {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--star-faint);
+  text-align: right;
+  margin-bottom: 2px;
+}
+/* Stars, not bullets — this is a star chart. */
+.year-rail-dot {
+  font-size: 0.72rem;
+  line-height: 1;
+  color: var(--star-faint);
+  transition: color var(--transition), filter var(--transition), transform var(--transition);
+}
+.year-rail-link:hover .year-rail-dot { color: var(--star-dim); }
+.year-rail-link.active .year-rail-dot {
+  color: var(--polaris);
+  filter: drop-shadow(0 0 7px var(--polaris-glow));
+  transform: scale(1.3);
+}
+
+/* Anchor jumps land below the fixed navbar. */
+.chart-year { scroll-margin-top: 96px; }
+
+.chart-empty { padding: 60px 0 40px; }
+.chart-empty-glyph {
+  font-size: 2rem;
+  color: var(--polaris);
+  filter: drop-shadow(0 0 14px var(--polaris-glow));
+  margin-bottom: 18px;
+}
+
+/* ── Compendium ── */
+.comp-controls { margin-bottom: 40px; }
+.comp-search {
+  display: block;
+  width: min(460px, 100%);
+  margin: 0 auto 18px;
+  padding: 11px 20px;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--star);
+  background: var(--card-fill);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  outline: none;
+  transition: border-color var(--transition), background var(--transition);
+}
+.comp-search::placeholder { color: var(--star-faint); }
+.comp-search:focus { border-color: var(--polaris-glow); background: var(--card-fill-hover); }
+
+.comp-section-label { font-size: 0.92rem; letter-spacing: 0.05em; text-transform: none; }
+.comp-intro { margin: -8px 0 16px; font-size: 0.85rem; }
+.comp-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+/* The name is the row's title, not its link — the destinations sit in the
+   icon row at the foot of the card, like the Star Chart's store links. */
+.comp-card-name { transition: color var(--transition); }
+
+/* The independence rules, said at the top rather than only in the footer:
+   whether a catalog is paid for is the first thing a reader needs to know. */
+.comp-creed {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 20px 0 0;
+}
+.comp-creed li {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--nebula);
+  background: var(--nebula-dim);
+  border: 1px solid var(--nebula-glow);
+  padding: 5px 12px;
+  border-radius: 7px;
+}
+.comp-status {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--star-faint);
+}
+.comp-status .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--polaris); }
+.comp-status.liked .dot { background: var(--nebula); box-shadow: 0 0 8px var(--nebula-glow); }
+.comp-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.04em;
+  color: var(--polaris);
+  transition: color var(--transition);
+}
+.comp-link:hover { color: var(--polaris-bright); }
+.comp-empty { padding: 30px 0; }
+.comp-independence {
+  margin-top: 56px;
+  padding: 28px 30px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+/* .section-sub is capped at 600px for a centred lede; inside this full-width
+   panel that cap left the text hugging the left edge with half the block
+   empty. Measure is set here instead, wide enough to fill the panel and
+   still short enough to read. */
+.comp-independence .section-sub { max-width: 82ch; }
+/* An unverified claim is a warning, so it takes the caution colour rather
+   than the brand gold - gold on this page means "link", and the two must not
+   look alike. */
+.comp-verify { color: var(--warn); }
+
+/* Mark plus name, reading as part of the sentence rather than as a button. */
+.comp-repo-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  vertical-align: -3px;
+  color: var(--polaris);
+  transition: color var(--transition);
+}
+.comp-repo-link:hover { color: var(--polaris-bright); }
+.comp-repo-link svg { width: 15px; height: 15px; flex: none; }
+
+/* ── 404 ── */
+.lost-code {
+  font-family: var(--font-mono);
+  font-size: clamp(4.5rem, 16vw, 9rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  background: linear-gradient(120deg, var(--polaris), var(--nebula), var(--aurora));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  margin-bottom: 18px;
+}
+.lost-sub {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--star-faint);
+  margin-bottom: 26px;
+}
+
+/* The minigame. It sits BELOW the two real links on purpose: a 404's first
+   job is routing people out, and this is only for whoever chooses to stay. */
+.lost-game {
+  position: relative;
+  max-width: 720px;
+  margin: 40px auto 0;
+  padding: 14px 14px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(70% 120% at 12% 0%, var(--aurora-dim), transparent 62%),
+    radial-gradient(60% 120% at 88% 100%, var(--nebula-dim), transparent 62%),
+    var(--space-2);
+}
+.lost-game-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.lost-game-title { color: var(--star-dim); font-weight: 700; }
+.lost-meta { display: inline-flex; align-items: center; gap: 12px; }
+.lost-status { color: var(--star-faint); }
+
+/* Hull points. Spent pips hollow out instead of disappearing, so the row
+   never changes width mid-flight and the loss is legible at a glance. */
+.lost-life { display: inline-flex; align-items: center; gap: 5px; }
+.lost-pip {
+  width: 11px;
+  height: 11px;
+  display: block;
+  border-radius: 2px;
+  background: var(--nebula);
+  box-shadow: 0 0 9px var(--nebula-glow);
+  transform: rotate(45deg);
+  transition: background var(--transition), box-shadow var(--transition), opacity var(--transition);
+}
+.lost-pip.is-spent {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--line-bright);
+  opacity: 0.75;
+}
+.lost-pip.is-hit { animation: pipHit 0.6s ease-out; }
+.lost-pip.is-mend { animation: pipMend 0.6s ease-out; }
+@keyframes pipHit {
+  0%   { transform: rotate(45deg) scale(1.9); background: var(--rose); box-shadow: 0 0 16px var(--rose-glow); }
+  100% { transform: rotate(45deg) scale(1); }
+}
+@keyframes pipMend {
+  0%   { transform: rotate(45deg) scale(0.3); }
+  55%  { transform: rotate(45deg) scale(1.5); box-shadow: 0 0 16px var(--nebula-glow); }
+  100% { transform: rotate(45deg) scale(1); }
+}
+
+.lost-canvas {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--void) 55%, transparent);
+  /* A finger dragging the comet must not scroll the page underneath it. */
+  touch-action: none;
+  cursor: crosshair;
+}
+.lost-canvas:focus-visible { outline: 2px solid var(--polaris); outline-offset: 3px; }
+
+.lost-hint {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  color: var(--star-faint);
+  text-align: center;
+  margin: 10px 0 2px;
+}
+
+/* Shown only when the course is charted, and only ever additive - the links
+   above never move or disappear. */
+.lost-over {
+  position: absolute;
+  inset: 44px 14px 10px;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--void) 74%, transparent);
+  backdrop-filter: blur(2px);
+}
+.lost-game.is-over .lost-over { display: flex; }
+.lost-over-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.3rem, 3vw, 1.8rem);
+  color: var(--star);
+  margin: 0;
+}
+.lost-over-stats {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.04em;
+  color: var(--star-dim);
+  margin: -6px 0 2px;
+}
+.lost-over-link,
+.lost-replay {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 9px 16px;
+  border-radius: 9px;
+  border: 1px solid var(--line-bright);
+  background: var(--tag-fill);
+  color: var(--star-dim);
+  transition: color var(--transition), border-color var(--transition), transform var(--transition);
+}
+.lost-over-link { color: var(--polaris); border-color: var(--polaris-glow); }
+.lost-over-link:hover,
+.lost-replay:hover { color: var(--star); border-color: var(--polaris); transform: translateY(-2px); }
+
+/* Motion off: the panel keeps its frame and says so, rather than sitting
+   there as a dead black box. */
+.lost-still { display: none; font-family: var(--font-mono); font-size: 0.72rem; color: var(--star-faint); text-align: center; margin: 0; padding: 26px 10px; }
+.lost-game.is-still .lost-canvas,
+.lost-game.is-still .lost-hint { display: none; }
+.lost-game.is-still .lost-still { display: block; }
+
+/* ── Scroll Animations ── */
+.fade-in-up, .fade-in-left, .fade-in-right { opacity: 0; transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.22, 1, 0.36, 1); }
+.fade-in-up    { transform: translateY(30px); }
+.fade-in-left  { transform: translateX(-30px); }
+.fade-in-right { transform: translateX(30px); }
+.fade-in-up.visible, .fade-in-left.visible, .fade-in-right.visible { opacity: 1; transform: none; }
+
+/* Below lg the two-column rows stack full width, so a 30px sideways offset
+   pushes the element past the viewport edge and the page reports horizontal
+   overflow (18px at 768, 10px at 1024) until the reveal completes. Stacked
+   content has no sideways relationship to animate anyway, so reveal it
+   vertically instead. */
+@media (max-width: 1199.98px) {
+  .fade-in-left, .fade-in-right { transform: translateY(30px); }
+}
+
+/* Nothing on this site scrolls sideways. Belt to the braces above: `clip`
+   rather than `hidden` so it cannot silently become a scroll container and
+   break position: sticky. */
+@media (prefers-reduced-motion: reduce) {
+  .fade-in-up, .fade-in-left, .fade-in-right { transition: none; }
+}
+.delay-1 { transition-delay: 0.08s; }
+.delay-2 { transition-delay: 0.16s; }
+.delay-3 { transition-delay: 0.24s; }
+.delay-4 { transition-delay: 0.32s; }
+
+/* ── Responsive ── */
+@media (max-width: 991px) {
+  .section-padding { padding: 76px 0; }
+  .belief-block { padding: 32px 26px; }
+  .cta-block { padding: 46px 28px; }
+}
+
+@media (max-width: 767px) {
+  .section-padding { padding: 58px 0; }
+  .hero-section { min-height: 100svh; }
+  .page-hero { padding: 140px 0 70px; }
+  .hero-cta { flex-direction: column; align-items: center; }
+  .btn-primary-custom, .btn-ghost-custom { max-width: 300px; text-align: center; }
+  .stat-row { gap: 22px; }
+  .pipeline-row { grid-template-columns: 1fr 1fr; gap: 4px; }
+  .pipeline-activity { grid-column: 1 / -1; font-size: 0.8rem; }
+  .belief-block { padding: 26px 18px; }
+  .belief-mark { width: 38px; height: 38px; }
+}
+
+@media (max-width: 480px) {
+  .title-line { font-size: clamp(2rem, 11vw, 3rem); }
+  .page-hero-title { font-size: clamp(2rem, 10vw, 3.5rem); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; }
+  html { scroll-behavior: auto; }
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 7px; }
+::-webkit-scrollbar-track { background: var(--void); }
+::-webkit-scrollbar-thumb { background: var(--aurora-glow); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--aurora); }

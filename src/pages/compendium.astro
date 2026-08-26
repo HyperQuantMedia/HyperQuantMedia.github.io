@@ -1,0 +1,175 @@
+---
+// The Compendium as a browsable public page: the catalog from
+// HQM-Compendium's README, rendered in the site's constellation style with
+// kind filtering and live search (wired in js/app.js).
+//
+// Linked from the Cosmos page's Compendium card rather than the main
+// navigation — it is a shelf inside the Cosmos, not a top-level world.
+import Base from '../layouts/Base.astro';
+import { kinds, entryCount, statusMeaning } from '../data/compendium.js';
+import LinkIcon from '../components/LinkIcon.astro';
+
+// Destinations render as icons, not words. The kind is derived from the label
+// the README already carries, so the catalog data stays a plain mirror of it
+// and nothing has to be re-tagged when an entry moves.
+function kindFor(label = '') {
+  const l = label.toLowerCase();
+  if (l.includes('repo') || l.includes('github')) return 'repo';
+  if (l.includes('steam')) return 'steam';
+  if (l.includes('download')) return 'download';
+  if (l.includes('release')) return 'releases';
+  if (l.includes('doc')) return 'docs';
+  if (l.includes('marketplace') || l.includes('extension') || l.includes('plugin')) return 'marketplace';
+  if (l.includes('web app') || l.includes('no install')) return 'web';
+  if (l.includes('cloud')) return 'cloud';
+  if (l.includes('trial')) return 'trial';
+  if (l.includes('site')) return 'site';
+  return 'external';
+}
+
+// Every destination an entry has, deduplicated by URL. The README's own
+// pointer goes in first on purpose: where it and the entry's site are the
+// same address, the specific label ("Docs", "Marketplace", "Web app") is the
+// one worth keeping, and adding the site first would flatten it to "Site".
+function destinations(e) {
+  const out = [];
+  const seen = new Set();
+  const add = (label, url) => {
+    if (!url || seen.has(url)) return;
+    seen.add(url);
+    out.push({ label, url, kind: kindFor(label) });
+  };
+  if (e.link) add(e.link.label, e.link.url);
+  add('Site', e.url);
+  (e.links || []).forEach((l) => add(l.label, l.url));
+  return out;
+}
+---
+
+<Base
+  title="Compendium — Tools We Rate | HyperQuant Media"
+  description="A curated, independent compendium of third-party software HyperQuant Media rates — applications, libraries, Unreal plugins, Visual Studio extensions, and learning resources, each with its cost, platform, and why we like it."
+  page="compendium"
+>
+
+<!-- Page Hero -->
+  <section class="page-hero">
+    <div class="page-hero-glow nebula"></div>
+    <div class="container">
+      <div class="page-hero-content">
+        <div class="section-label justify-content-center d-inline-flex">The Librarian's Shelves · {entryCount} Entries</div>
+        <h1 class="page-hero-title">Compendium</h1>
+        <p class="page-hero-sub">A curated landscape of third-party tools that do a job well — each with its cost, platform, and why we like it. Nothing here is paid for: no affiliate links, no sponsorships, no placements. A row is earned by use on real work.</p>
+        <ul class="comp-creed">
+          <li>No affiliate links</li>
+          <li>No sponsorships</li>
+          <li>Battle-tested, not benchmarked</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="section-padding pt-4">
+    <div class="container">
+
+      <!-- Search + kind filter -->
+      <div class="comp-controls fade-in-up">
+        <input
+          type="search"
+          id="compSearch"
+          class="comp-search"
+          placeholder="Search the shelves…"
+          aria-label="Search the compendium"
+        />
+        <div class="chart-filter" id="compFilter" role="group" aria-label="Filter by kind">
+          <button class="chart-filter-btn active" data-kind="all" type="button"><span class="chart-filter-glyph" aria-hidden="true">✦</span>All</button>
+          {kinds.map((k) => (
+            <button class="chart-filter-btn" data-kind={k.key} type="button">{k.label}</button>
+          ))}
+        </div>
+      </div>
+
+      <div class="comp-kinds">
+        {kinds.map((k) => (
+          <div class="comp-kind" data-comp-kind={k.key}>
+            {k.sections.map((sec) => (
+              <div class="chart-year" data-comp-group>
+                <div class="chart-year-head">
+                  <span class="chart-year-star" aria-hidden="true">✦</span>
+                  <span class="chart-year-label comp-section-label">{sec.name}</span>
+                  <span class="chart-year-line" aria-hidden="true"></span>
+                </div>
+                {sec.intro && <p class="section-sub comp-intro">{sec.intro}</p>}
+                <div class="chart-grid">
+                  {sec.entries.map((e) => (
+                    <div
+                      class="chart-card comp-card"
+                      data-search={`${e.name} ${e.capability} ${e.cost} ${e.platforms || ''} ${e.language || ''} ${e.note}`.toLowerCase()}
+                    >
+                      <div class="comp-card-head">
+                        <span class="chart-card-title comp-card-name">{e.name}</span>
+                        <span
+                          class={e.status === 'Liked' ? 'comp-status liked' : 'comp-status'}
+                          title={statusMeaning[e.status]}
+                        >
+                          <span class="dot"></span>{e.status}
+                        </span>
+                      </div>
+                      <div class="chart-card-partner">{e.capability}</div>
+                      <p class="chart-card-note">{e.note}</p>
+                      <div class="chart-card-platforms">
+                        <span class="tag">{e.cost}{e.verify && (
+                          <span class="comp-verify" title="Cost tier or platform unconfirmed — check the vendor's page"> ⚠</span>
+                        )}</span>
+                        {e.platforms && <span class="tag">{e.platforms}</span>}
+                        {e.language && <span class="tag">{e.language}</span>}
+                      </div>
+                      <div class="chart-card-links">
+                        {destinations(e).map((dst) => (
+                          <a
+                            href={dst.url}
+                            class="chart-store-link"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title={`${e.name} — ${dst.label}`}
+                            aria-label={`${e.name} — ${dst.label}`}
+                          ><LinkIcon kind={dst.kind} /></a>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+
+      <p class="comp-empty section-sub text-center" id="compEmpty" hidden>Nothing on the shelves matches — try fewer letters.</p>
+
+      <!-- The independence rules from the source README, load-bearing. -->
+      <div class="comp-independence fade-in-up">
+        <div class="section-label">Independence</div>
+        <p class="section-sub mb-2">
+          This is a landscape, not a mandate — nothing here is a requirement, an endorsement for hire, or a paid
+          placement. No affiliate links: every link points at the vendor's own site, unadorned, and we earn nothing
+          from a click or a purchase. <span class="comp-verify">Entries marked ⚠ carry an unverified cost tier or platform — confirm
+          on the vendor's page before relying on them.</span> A tool's absence means nobody here has used it, not that it is bad.
+        </p>
+        <p class="section-sub mb-0">
+          All product names, logos, and brands are the property of their respective owners, used here for
+          identification only. Curated in the open — additions welcome by issue or pull request:{' '}
+          <a
+            href="https://github.com/HyperQuantMedia/HQM-Compendium"
+            class="comp-repo-link"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="HQM-Compendium on GitHub"
+          ><LinkIcon kind="repo" />Compendium Repo</a>
+        </p>
+      </div>
+
+    </div>
+  </section>
+
+</Base>

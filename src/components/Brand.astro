@@ -1,0 +1,21 @@
+---
+// The brand lockup: logo mark plus the wordmark stacked three lines high —
+// HYPER / QUANT / MEDIA — matching the brand asset's own composition.
+//
+// The mark is an image; the wordmark stays live text. The only wordmark asset
+// available renders in white, which would vanish in light mode, and text also
+// keeps the brand selectable, searchable, and legible at any size.
+import { Image } from 'astro:assets';
+import mark from '../assets/logo-mark.png';
+
+interface Props {
+  size?: 'nav' | 'footer' | 'lg';
+}
+const { size = 'nav' } = Astro.props;
+const px = { nav: 36, footer: 32, lg: 64 }[size];
+---
+
+<span class={`brand-lockup brand-${size}`}>
+  <Image src={mark} alt="" width={px} height={px} densities={[1, 2, 3]} class="brand-mark" loading="eager" />
+  <span class="brand-word"><span>Hyper</span><span>Quant</span><span>Media</span></span>
+</span>

@@ -1,0 +1,19 @@
+# Host-level 301s for Cloudflare Pages / Netlify. Astro's own `redirects`
+# config emits meta-refresh pages, which browsers honour but crawlers treat
+# as soft; these are the real thing. Keep in step with astro.config.mjs.
+
+# Legacy paths from the previous site
+/solutions      /services   301
+/get-started    /contact    301
+/home           /           301
+
+# Ecosystem was renamed to Cosmos
+/ecosystem      /cosmos     301
+/ecosystem.html /cosmos     301
+
+# Old hand-written .html URLs
+/index.html     /           301
+/services.html  /services   301
+/studio.html    /studio     301
+/vision.html    /vision     301
+/contact.html   /contact    301

@@ -1,0 +1,74 @@
+---
+// The navbar, defined once. Every page renders this, so adding or removing a
+// link is a single edit in src/data/site.js.
+import { nav, socialLinks } from '../data/site.js';
+import ThemeToggle from './ThemeToggle.astro';
+import SocialIcon from './SocialIcon.astro';
+import Brand from './Brand.astro';
+
+interface Props {
+  page: string;
+}
+const { page } = Astro.props;
+---
+
+<nav class="navbar navbar-expand-lg fixed-top" id="mainNav">
+  <div class="container">
+
+    <!-- Brand block: lockup with the social row beneath it. The row is its own
+         set of links rather than nested inside the home anchor, since anchors
+         cannot legally contain anchors. -->
+    <div class="brand-block">
+      <a class="navbar-brand" href="/" aria-label="HyperQuant Media — home">
+        <Brand />
+      </a>
+      <div class="brand-social d-none d-lg-flex" aria-label="HyperQuant Media on social platforms">
+        {socialLinks.map((s) => (
+          <a
+            href={s.href}
+            class="brand-social-link"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={s.label}
+            title={s.label}
+          ><SocialIcon key={s.key} /></a>
+        ))}
+      </div>
+    </div>
+
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-label="Toggle navigation">
+      <span class="toggler-icon"></span><span class="toggler-icon"></span><span class="toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav ms-auto gap-1 align-items-lg-center">
+        {nav.map((item) => (
+          <li class="nav-item">
+            <a
+              class={item.cta ? 'nav-link nav-cta' : 'nav-link'}
+              href={item.href}
+              data-nav={item.key}
+              aria-current={page === item.key ? 'page' : undefined}
+            >{item.label}</a>
+          </li>
+        ))}
+        <li class="nav-item ms-lg-2 mt-2 mt-lg-0"><ThemeToggle /></li>
+      </ul>
+
+      <!-- Below lg the brand-side row is hidden, so the same links ride the
+           collapsed menu instead. -->
+      <div class="brand-social d-flex d-lg-none mt-3 pt-3 mobile-social">
+        {socialLinks.map((s) => (
+          <a
+            href={s.href}
+            class="brand-social-link"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={s.label}
+            title={s.label}
+          ><SocialIcon key={s.key} /></a>
+        ))}
+      </div>
+    </div>
+  </div>
+</nav>

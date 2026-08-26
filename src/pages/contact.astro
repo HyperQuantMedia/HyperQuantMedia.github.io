@@ -1,0 +1,122 @@
+---
+import Base from '../layouts/Base.astro';
+import Brand from '../components/Brand.astro';
+import SocialIcon from '../components/SocialIcon.astro';
+import { socialLinks } from '../data/site.js';
+---
+
+<Base
+  title="Contact — Start a Project | HyperQuant Media"
+  description="Contact HyperQuant Media. Discuss your project, a Cosmos partnership, early access, or a career opportunity."
+  page="contact"
+>
+
+<!-- Page Hero -->
+  <section class="page-hero">
+    <div class="page-hero-glow polaris"></div>
+    <div class="container">
+      <div class="page-hero-content">
+        <div class="section-label justify-content-center d-inline-flex">Let's Build Something</div>
+        <h1 class="page-hero-title">Get In Touch</h1>
+        <p class="page-hero-sub">Tell us what you're trying to build. We'll figure out the right approach together.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Contact -->
+  <section class="section-padding">
+    <div class="container">
+      <div class="row g-5">
+
+        <!-- Form -->
+        <div class="col-lg-7 fade-in-left">
+          <h2 class="section-title mb-4">Tell us what you need</h2>
+          <p class="section-body">
+            Pick the closest topic and your mail client opens with the subject already set —
+            no form, no third-party service handling your message, no spam funnel.
+          </p>
+          <!-- Reading order is what people ask for most, not the order the
+               services page lists them. Each topic carries the accent of the
+               service card it answers on the homepage; Cosmos and Business
+               Development have no card, so they take the two families no
+               service uses — comet and ember — rather than borrowing a
+               colour that already means something else here. -->
+          <div class="row g-3 mt-2">
+            <div class="col-sm-6">
+              <a class="topic-link a-aurora" href="mailto:info@hyperquantmedia.com?subject=Game%20Development">
+                <span class="topic-glyph">◉</span>Game Development
+              </a>
+            </div>
+            <div class="col-sm-6">
+              <a class="topic-link a-polaris" href="mailto:info@hyperquantmedia.com?subject=AR%2FVR%20Experiences">
+                <span class="topic-glyph">◇</span>AR/VR Experiences
+              </a>
+            </div>
+            <div class="col-sm-6">
+              <a class="topic-link a-comet" href="mailto:info@hyperquantmedia.com?subject=Cosmos%20%2F%20Early%20Access">
+                <span class="topic-glyph">✦</span>Cosmos / Early Access
+              </a>
+            </div>
+            <div class="col-sm-6">
+              <a class="topic-link a-ember" href="mailto:bizdev@hyperquantmedia.com?subject=Partnership%20Enquiry">
+                <span class="topic-glyph">⬢</span>Business Development
+              </a>
+            </div>
+            <div class="col-sm-6">
+              <a class="topic-link a-nebula" href="mailto:info@hyperquantmedia.com?subject=Website%20Development">
+                <span class="topic-glyph">◈</span>Website Development
+              </a>
+            </div>
+            <div class="col-sm-6">
+              <a class="topic-link a-stellar" href="mailto:info@hyperquantmedia.com?subject=IT%20Consulting">
+                <span class="topic-glyph">⬡</span>IT Consulting
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Contact Info -->
+        <div class="col-lg-4 offset-lg-1 fade-in-right">
+          <div class="mb-4"><Brand size="lg" /></div>
+          <h2 class="section-title mb-4">Direct contact</h2>
+
+          <div class="contact-info-item">
+            <div class="ci-label c-nebula">General Enquiries</div>
+            <a href="mailto:info@hyperquantmedia.com" class="ci-value">info@hyperquantmedia.com</a>
+          </div>
+
+          <div class="contact-info-item">
+            <div class="ci-label c-aurora">Business Development</div>
+            <a href="mailto:bizdev@hyperquantmedia.com" class="ci-value">bizdev@hyperquantmedia.com</a>
+          </div>
+
+          <div class="contact-info-item">
+            <div class="ci-label c-polaris">Location</div>
+            <span class="ci-value">India</span>
+          </div>
+
+          <div class="contact-social mt-4">
+            <div class="ci-label c-faint">Follow Us</div>
+            <div class="d-flex gap-3 mt-2 flex-wrap">
+              {socialLinks.map((s) => (
+                <a
+                  href={s.href}
+                  class="social-link-lg"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={s.label}
+                ><SocialIcon key={s.key} />{s.label}</a>
+              ))}
+            </div>
+          </div>
+
+          <div class="contact-note mt-5">
+            <p>We typically respond within 24–48 hours. For urgent project enquiries, email bizdev directly.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+</Base>

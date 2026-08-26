@@ -1,0 +1,52 @@
+---
+// The footer, defined once. Navigation links and social links both come from
+// src/data/site.js, so they can never drift from the navbar.
+import { nav, socialLinks, email, site } from '../data/site.js';
+import SocialIcon from './SocialIcon.astro';
+import Brand from './Brand.astro';
+
+// Copyright range. The start year is fixed (the year the company's work began);
+// the end year is the build year, so the notice never goes stale. They collapse
+// to a single year while the two are the same.
+const founded = 2025;
+const year = new Date().getFullYear();
+const copyright = year > founded ? `${founded}-${year}` : `${founded}`;
+---
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="row g-4 py-5">
+      <div class="col-lg-4">
+        <div class="footer-brand mb-2"><Brand size="footer" /></div>
+        <p class="footer-tagline">{site.tagline}</p>
+        <div class="footer-social mt-3">
+          {socialLinks.map((s) => (
+            <a
+              href={s.href}
+              class="social-link"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={s.label}
+            ><SocialIcon key={s.key} /></a>
+          ))}
+        </div>
+      </div>
+      <div class="col-sm-6 col-lg-4">
+        <h5 class="footer-heading">Navigation</h5>
+        <ul class="footer-links">
+          {nav.map((item) => (
+            <li><a href={item.href}>{item.label}</a></li>
+          ))}
+        </ul>
+      </div>
+      <div class="col-sm-6 col-lg-4">
+        <h5 class="footer-heading">Contact</h5>
+        <ul class="footer-links">
+          <li><a href={`mailto:${email.general}`}>{email.general}</a></li>
+          <li><a href={`mailto:${email.bizdev}`}>{email.bizdev}</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom"><p>© {copyright} {site.name}. All rights reserved.</p></div>
+  </div>
+</footer>

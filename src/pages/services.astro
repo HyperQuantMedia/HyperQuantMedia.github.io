@@ -1,0 +1,239 @@
+---
+import Base from '../layouts/Base.astro';
+import Pedigree from '../components/Pedigree.astro';
+import PlatformIcon from '../components/PlatformIcon.astro';
+import Cta from '../components/Cta.astro';
+---
+
+<Base
+  title="Services — Games, AR/VR, AI & Web | HyperQuant Media"
+  description="HyperQuant Media offers bespoke website development, immersive game development, AR/VR interactive experiences, and strategic IT consulting."
+  page="services"
+>
+
+<!-- Page Hero -->
+  <section class="page-hero">
+    <div class="page-hero-glow nebula"></div>
+    <div class="container">
+      <div class="page-hero-content">
+        <div class="section-label justify-content-center d-inline-flex">What We Offer</div>
+        <h1 class="page-hero-title">Services</h1>
+        <p class="page-hero-sub">End-to-end creative technology. Built from your goals, not a template.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Credentials before claims: this page is where a prospect weighs whether
+       we can do the work, so the pedigree band leads rather than trails. -->
+  <Pedigree />
+
+  <!-- Game Development -->
+  <section id="games" class="section-padding">
+    <div class="container">
+      <div class="row align-items-center g-5">
+        <div class="col-lg-5 fade-in-right">
+          <div class="service-number c-aurora">01</div>
+          <div class="section-label mt-2">Game Development</div>
+          <h2 class="section-title">Engine, graphics, and the tools your team works in</h2>
+          <p class="section-body">Our specialisation is the unglamorous end most studios are short on: profiling, optimisation, and debugging the problems that only appear at scale or on one specific platform. We build games ourselves, so we know which of those bottlenecks cost real weeks.</p>
+          <p class="section-body">That extends to graphics and rendering, the pipelines artists and designers work through, the editor tooling that decides how fast a team can actually iterate, and the platform, engine, and technical art and design work underneath it all.</p>
+          <ul class="service-feature-list mt-3">
+            <li>Performance profiling, optimisation, and debugging</li>
+            <li>Graphics and rendering tools and pipelines for artists and designers</li>
+            <li>Designer and editor tooling</li>
+            <li>Platform and engine development</li>
+            <li>Technical art and technical design, including systems architecture</li>
+          </ul>
+
+          <div class="spec-block mt-4">
+            <div class="spec-label">Engines</div>
+            <div class="spec-row">
+              <span class="spec-chip primary glow" data-brand="unreal"><PlatformIcon key="unrealengine" />Unreal Engine</span>
+              <span class="spec-chip primary glow">Custom Engines</span>
+              <span class="spec-chip" data-brand="unity"><PlatformIcon key="unity" />Unity</span>
+              <span class="spec-chip" data-brand="godot"><PlatformIcon key="godot" />Godot</span>
+            </div>
+          </div>
+
+          <div class="spec-block mt-3">
+            <div class="spec-label">Shipped-on platforms</div>
+            <div class="spec-row">
+              <span class="spec-chip glow" data-brand="windows"><PlatformIcon key="windows" />PC</span>
+              <span class="spec-chip glow" data-brand="xbox"><PlatformIcon key="xbox" />Xbox</span>
+              <span class="spec-chip" data-brand="playstation"><PlatformIcon key="playstation" />PlayStation</span>
+              <span class="spec-chip" data-brand="android"><PlatformIcon key="android" />Android</span>
+            </div>
+            <p class="spec-note">Platform experience held by members of our team.</p>
+          </div>
+
+          <Cta href="/contact" class="mt-4 d-inline-block">Discuss Your Game</Cta>
+        </div>
+        <div class="col-lg-6 fade-in-left">
+          <div class="service-visual a-aurora">
+            <div class="sv-tag c-aurora">Games</div>
+            <div class="sv-items">
+              <div class="sv-item">Profiling, Optimisation &amp; Debugging</div>
+              <div class="sv-item">Rendering &amp; Graphics Pipelines</div>
+              <div class="sv-item">Artist &amp; Designer Tooling</div>
+              <div class="sv-item">Editor Tools</div>
+              <div class="sv-item">Platform &amp; Engine Development</div>
+              <div class="sv-item">Technical Art &amp; Technical Design</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="xr" class="section-padding band">
+    <div class="container">
+      <div class="row align-items-center g-5 flex-lg-row-reverse">
+        <div class="col-lg-5 fade-in-left">
+          <div class="service-number c-polaris">02</div>
+          <div class="section-label mt-2">Interactive Experiences</div>
+          <h2 class="section-title">AR/VR and immersive digital experiences</h2>
+          <p class="section-body">We build experiences that change how people think about a product, a space, or an idea. Augmented reality, virtual reality, interactive installations — experiences that don't just inform but immerse.</p>
+          <p class="section-body">Training employees through VR simulation, showcasing real estate with AR walkthrough, building an interactive brand installation — we design and develop the full experience.</p>
+          <ul class="service-feature-list mt-3">
+            <li>Augmented reality (AR) applications</li>
+            <li>Virtual reality (VR) environments</li>
+            <li>Interactive digital installations</li>
+            <li>Training and simulation solutions</li>
+            <li>Brand experience activations</li>
+          </ul>
+          <Cta href="/contact" class="mt-4 d-inline-block">Explore Possibilities</Cta>
+        </div>
+        <div class="col-lg-6 offset-lg-1 fade-in-right">
+          <div class="service-visual a-polaris">
+            <div class="sv-tag c-polaris">XR</div>
+            <div class="sv-items">
+              <div class="sv-item">AR Mobile Applications</div>
+              <div class="sv-item">VR Training &amp; Simulation</div>
+              <div class="sv-item">Interactive Installations</div>
+              <div class="sv-item">Real Estate &amp; Architecture Viz</div>
+              <div class="sv-item">Brand Experience Activations</div>
+              <div class="sv-item">360° Virtual Tours</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="ai" class="section-padding">
+    <div class="container">
+      <div class="row align-items-center g-5">
+        <div class="col-lg-5 fade-in-left">
+          <div class="service-number c-rose">03</div>
+          <div class="section-label mt-2">Applied AI</div>
+          <h2 class="section-title">AI built into the product, not bolted on</h2>
+          <p class="section-body">Most AI work stalls at the demo. We build the unglamorous parts that decide whether it survives contact with real users: retrieval that returns the right context, agent workflows that fail safely, evaluation that tells you when a change made things worse.</p>
+          <p class="section-body">We build these systems for our own products first — the tools in our Cosmos run on them daily. What we offer clients is not a slide deck about the technology; it is the same machinery, already load-bearing somewhere.</p>
+          <ul class="service-feature-list mt-3">
+            <li>Agent workflows and tool orchestration</li>
+            <li>Retrieval systems over your own content</li>
+            <li>AI features inside existing products</li>
+            <li>Evaluation harnesses and regression checks</li>
+            <li>Prompt architecture and model selection</li>
+          </ul>
+          <Cta href="/contact" class="mt-4 d-inline-block">Discuss AI Work</Cta>
+        </div>
+        <div class="col-lg-6 offset-lg-1 fade-in-right">
+          <div class="service-visual a-rose">
+            <div class="sv-tag c-rose">Applied AI</div>
+            <div class="sv-items">
+              <div class="sv-item">Agent Workflows</div>
+              <div class="sv-item">Retrieval &amp; Context</div>
+              <div class="sv-item">In-Product AI Features</div>
+              <div class="sv-item">Evaluation Harnesses</div>
+              <div class="sv-item">Prompt Architecture</div>
+              <div class="sv-item">Model Selection</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="web" class="section-padding band">
+    <div class="container">
+      <div class="row align-items-center g-5 flex-lg-row-reverse">
+        <div class="col-lg-5 fade-in-left">
+          <div class="service-number c-nebula">04</div>
+          <div class="section-label mt-2">Website Development</div>
+          <h2 class="section-title">Bespoke, high-performance websites</h2>
+          <p class="section-body">We don't use templates. Every site starts from your brand's goals and the experience you want your audience to have — then we engineer it from the ground up.</p>
+          <p class="section-body">Responsive, fast, and built to scale. A product landing page, a full e-commerce platform, or a custom web application — all built with the same production rigour we bring to game development.</p>
+          <ul class="service-feature-list mt-3">
+            <li>Custom design from scratch — no page builders</li>
+            <li>Performance-first development</li>
+            <li>Mobile-responsive across all devices</li>
+            <li>SEO-ready architecture</li>
+            <li>Ongoing maintenance and iteration</li>
+          </ul>
+          <Cta href="/contact" class="mt-4 d-inline-block">Start a Project</Cta>
+        </div>
+        <div class="col-lg-6 offset-lg-1 fade-in-right">
+          <div class="service-visual a-nebula">
+            <div class="sv-tag c-nebula">Web</div>
+            <div class="sv-items">
+              <div class="sv-item">Custom Design &amp; Development</div>
+              <div class="sv-item">E-Commerce Solutions</div>
+              <div class="sv-item">Web Applications</div>
+              <div class="sv-item">CMS Integration</div>
+              <div class="sv-item">Performance Optimization</div>
+              <div class="sv-item">Domain &amp; Hosting Setup</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="consulting" class="section-padding">
+    <div class="container">
+      <div class="row align-items-center g-5">
+        <div class="col-lg-5 fade-in-right">
+          <div class="service-number c-stellar">05</div>
+          <div class="section-label mt-2">IT Consulting</div>
+          <h2 class="section-title">Clear technology decisions, made with you</h2>
+          <p class="section-body">Technology moves fast. We help businesses keep up — and get ahead. From IT infrastructure and social media strategy to prompt engineering and AI integration, we bring clarity to complex technical decisions.</p>
+          <p class="section-body">We act as partners in innovation, not just service providers. We understand your business goals first, then design the technology around them.</p>
+          <ul class="service-feature-list mt-3">
+            <li>IT infrastructure assessment and planning</li>
+            <li>Social media content strategy</li>
+            <li>AI integration and prompt engineering</li>
+            <li>Digital transformation roadmapping</li>
+            <li>Ongoing technical advisory</li>
+          </ul>
+          <Cta href="/contact" class="mt-4 d-inline-block">Talk Strategy</Cta>
+        </div>
+        <div class="col-lg-6 fade-in-left">
+          <div class="service-visual a-stellar">
+            <div class="sv-tag c-stellar">Consulting</div>
+            <div class="sv-items">
+              <div class="sv-item">IT Infrastructure Planning</div>
+              <div class="sv-item">Social Media Strategy</div>
+              <div class="sv-item">AI &amp; Prompt Engineering</div>
+              <div class="sv-item">Digital Transformation</div>
+              <div class="sv-item">Tech Stack Advisory</div>
+              <div class="sv-item">Process Optimization</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section section-padding">
+    <div class="container">
+      <div class="cta-block text-center fade-in-up">
+        <h2 class="cta-title">Not sure which service you need?</h2>
+        <p class="cta-sub">// tell us what you're building — we'll find the right approach together</p>
+        <Cta href="/contact" class="mt-3 d-inline-block">Get In Touch</Cta>
+      </div>
+    </div>
+  </section>
+
+</Base>

@@ -1,0 +1,183 @@
+---
+import { tools } from '../data/products.js';
+
+// The field: every tool as its own object in the sky, drawn as one figure.
+// This replaced an orrery stage that sat one tool at the centre with the rest
+// in orbit, which was the wrong shape: no tool here is the centre. A
+// constellation has none either, and that is the better story — each body is
+// worth naming on its own, and the figure only exists because they are all up
+// there together.
+//
+// No two bodies are alike. Each is the thing the tool is: Warpgate a wormhole,
+// Compendium a library of shelved light, Astra a charted star, DocuTale a
+// scroll of light, Afterglow a fading nebula, Pulsar a beaming pulsar,
+// Quartermaster a crossing of tools.
+//
+// Every object is drawn in local coordinates and placed by a transform
+// ATTRIBUTE on its group, because the CSS transforms that animate the parts
+// inside would otherwise override that positioning.
+//
+// The figure draws itself when it scrolls into view and then rests. Bodies
+// link down to their cards for anyone who wants that, but nothing here has to
+// be clicked for the section to say what it means.
+//
+// Positions are hand-placed rather than computed — an evenly spaced chain
+// reads as a sawtooth, not a constellation. A new tool therefore needs a place
+// here AND an object below; the build fails loudly rather than dropping it,
+// the same contract the product icons use on the page.
+const W = 900;
+const H = 360;
+
+const chart: Record<string, { x: number; y: number; label: 'above' | 'below' }> = {
+  compendium:    { x: 146, y: 176, label: 'below' },
+  afterglow:     { x: 252, y: 74,  label: 'above' },
+  quartermaster: { x: 300, y: 286, label: 'below' },
+  warpgate:      { x: 438, y: 178, label: 'below' },
+  astra:         { x: 612, y: 152, label: 'above' },
+  docutale:      { x: 748, y: 64,  label: 'above' },
+  pulsar:        { x: 792, y: 262, label: 'below' },
+};
+
+// The lines of the figure, as pairs of slugs: three tools gather into the
+// gate, and the chart-and-rhythm arm runs out the other side.
+const lines = [
+  ['compendium', 'warpgate'],
+  ['afterglow', 'warpgate'],
+  ['quartermaster', 'warpgate'],
+  ['warpgate', 'astra'],
+  ['astra', 'docutale'],
+  ['astra', 'pulsar'],
+];
+
+const unplaced = tools.filter((t) => !chart[t.slug]).map((t) => t.slug);
+if (unplaced.length) {
+  throw new Error(
+    `ConstellationField: no body placed for ${unplaced.join(', ')} — add it to the chart, join it to the figure, and draw its object.`,
+  );
+}
+
+const stars = tools.map((t) => ({ ...t, ...chart[t.slug] }));
+const byslug = Object.fromEntries(stars.map((s) => [s.slug, s]));
+
+// A four-point star in local coordinates, used by the bodies that are stars.
+function glint(r: number) {
+  const w = r * 0.17;
+  return `M0,${-r} Q${w},${-w} ${r},0 Q${w},${w} 0,${r} Q${-w},${w} ${-r},0 Q${-w},${-w} 0,${-r} Z`;
+}
+
+// Background sky. Deterministic so the markup is byte-stable between builds.
+const sky = Array.from({ length: 46 }, (_, i) => ({
+  x: Math.round(((i * 137.5) % (W - 40)) + 20),
+  y: Math.round(((i * i * 53) % (H - 60)) + 30),
+  r: [0.6, 0.9, 1.2][i % 3],
+  d: (i % 7) * 0.6,
+}));
+---
+
+<div class="field-wrap">
+  <svg class="field" viewBox={`0 0 ${W} ${H}`} fill="none" role="img"
+       aria-label="The tools of the Cosmos, drawn as a constellation.">
+    <g class="field-sky" aria-hidden="true">
+      {sky.map((s) => <circle cx={s.x} cy={s.y} r={s.r} style={`--d: ${s.d}s`} />)}
+    </g>
+
+    <g class="field-lines" aria-hidden="true">
+      {lines.map(([a, b], i) => (
+        <line class="field-line" x1={byslug[a].x} y1={byslug[a].y} x2={byslug[b].x} y2={byslug[b].y}
+              style={`--s: ${i}`} />
+      ))}
+    </g>
+
+    {stars.map((s, i) => (
+      <a class={`field-star ${s.accent}${s.accentAlt ? ` alt-${s.accentAlt}` : ''} is-${s.status}`}
+         href={`#${s.slug}`} style={`--i: ${i}`}>
+        <title>{s.name} — {s.role}</title>
+        <circle class="field-bloom" cx={s.x} cy={s.y} r={s.status === 'horizon' ? 13 : 17} />
+
+        <g class="field-object" transform={`translate(${s.x} ${s.y})`}>
+          {s.slug === 'warpgate' && (
+            <g class="wh">
+              <ellipse class="wh-ring" rx="20" ry="7.5" />
+              <ellipse class="wh-ring" rx="14" ry="5.2" />
+              <ellipse class="wh-ring" rx="8" ry="3" />
+              <circle class="wh-core" r="2.4" />
+            </g>
+          )}
+
+          {s.slug === 'compendium' && (
+            <g class="lib">
+              {[-9, 1, 11].map((y, r) => (
+                <g class="lib-shelf">
+                  <line class="lib-rail" x1="-17" y1={y} x2="17" y2={y} />
+                  {[-14, -9.5, -5, -0.5, 4, 8.5, 13].map((x, k) => (
+                    <rect class="lib-spine" x={x} y={y - 6 - (k % 2)} width="3" height={6 + (k % 2)} rx="0.6" />
+                  ))}
+                </g>
+              ))}
+            </g>
+          )}
+
+          {s.slug === 'astra' && (
+            <g class="cha">
+              <path class="cha-route" d="M-22,9 C-10,-7 9,11 22,-7" />
+              <circle class="cha-way" cx="-22" cy="9" r="1.5" />
+              <circle class="cha-way" cx="22" cy="-7" r="1.5" />
+              <path class="cha-glint" d={glint(12)} />
+            </g>
+          )}
+
+          {s.slug === 'docutale' && (
+            <g class="scr">
+              <rect class="scr-sheet" x="-11" y="-10" width="22" height="20" rx="3" />
+              <path class="scr-curl" d="M-11,-10 a3.4,10 0 0 0 0,20" />
+              <path class="scr-curl" d="M11,-10 a3.4,10 0 0 1 0,20" />
+              <line class="scr-line" x1="-6" y1="-4.5" x2="6" y2="-4.5" />
+              <line class="scr-line" x1="-6" y1="0" x2="4" y2="0" />
+              <line class="scr-line" x1="-6" y1="4.5" x2="6.5" y2="4.5" />
+            </g>
+          )}
+
+          {s.slug === 'afterglow' && (
+            <g class="neb">
+              <circle class="neb-cloud" cx="-7" cy="-4" r="12" />
+              <circle class="neb-cloud" cx="7" cy="4" r="10" />
+              <circle class="neb-cloud" cx="4" cy="-8" r="7" />
+              <path class="neb-glint" d={glint(10)} />
+              <circle class="neb-spark" cx="-14" cy="7" r="1" />
+              <circle class="neb-spark" cx="13" cy="-10" r="1.2" />
+              <circle class="neb-spark" cx="11" cy="11" r="0.9" />
+            </g>
+          )}
+
+          {s.slug === 'pulsar' && (
+            <g class="pul">
+              <g class="pul-beams">
+                <path class="pul-beam" d="M0,0 L-5,-30 L5,-30 Z" />
+                <path class="pul-beam" d="M0,0 L-5,30 L5,30 Z" />
+              </g>
+              <circle class="pul-ring" r="8" />
+              <circle class="pul-ring" r="8" />
+              <circle class="pul-core" r="3" />
+            </g>
+          )}
+
+          {s.slug === 'quartermaster' && (
+            <g class="qmt">
+              <path class="qmt-tool" d="M-13,9 L5,-6" />
+              <path class="qmt-head" d="M11,-12 a5.6,5.6 0 1 0 3.6,6.4 L8.6,-6.2 Z" />
+              <path class="qmt-tool driver" d="M13,10 L-2,-5" />
+              <rect class="qmt-grip" x="-9.5" y="-11.5" width="7" height="4.4" rx="1.4"
+                    transform="rotate(-45 -6 -9.3)" />
+              <circle class="qmt-bolt" r="1.6" />
+            </g>
+          )}
+        </g>
+
+        <text class="field-label" x={s.x} y={s.label === 'above' ? s.y - 32 : s.y + 42}
+              text-anchor="middle">{s.name}</text>
+      </a>
+    ))}
+  </svg>
+</div>
+
+<p class="field-legend">Alone, each one is an edge. Together, they compound.</p>

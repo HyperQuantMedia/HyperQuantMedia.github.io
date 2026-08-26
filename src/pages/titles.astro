@@ -1,0 +1,172 @@
+---
+// The Star Chart: shipped titles the team has worked on, grouped by year
+// with client-side platform filtering (wired in js/app.js).
+//
+// In the main navigation (after Studio) and linked from the pedigree bands
+// on the homepage and services page.
+import Base from '../layouts/Base.astro';
+import PlatformIcon from '../components/PlatformIcon.astro';
+import Cta from '../components/Cta.astro';
+import { credits, creditPlatforms, creditYears } from '../data/credits.js';
+
+// Platform-name -> icon key for the filter pills and the per-title platform
+// tags. 'All' gets the brand's own star glyph instead of a platform mark.
+const platformIcon = {
+  PC: 'windows',
+  Xbox: 'xbox',
+  PlayStation: 'playstation',
+  'Nintendo Switch': 'nintendoswitch',
+  Android: 'android',
+  VR: 'vr',
+};
+
+// Store names, used only to say where a platform tag leads.
+const storeKinds = [
+  { key: 'steam', label: 'Steam' },
+  { key: 'xbox', label: 'Xbox Store' },
+  { key: 'playstation', label: 'PlayStation Store' },
+];
+
+// Which store a platform tag can point at. The tags carry the store links
+// outright — there is no second row of bare store icons, because the same
+// destination offered twice reads as two different places. A tag is a live link only when the
+// title actually carries that store URL; everything else — a platform with no
+// store page, or a title that has not shipped — renders dotted and dimmed
+// rather than looking clickable and going nowhere.
+const platformStore = {
+  PC: 'steam',
+  Xbox: 'xbox',
+  PlayStation: 'playstation',
+};
+const storeLabel = Object.fromEntries(storeKinds.map(({ key, label }) => [key, label]));
+
+const byYear = creditYears.map((year) => ({
+  year,
+  entries: credits.filter((c) => c.year === year),
+}));
+---
+
+<Base
+  title="Credits — Titles We've Shipped | HyperQuant Media"
+  description="Shipped titles that members of the HyperQuant Media team have worked on across studios, platforms, and years."
+  page="titles"
+>
+
+<!-- Page Hero -->
+  <section class="page-hero">
+    <div class="page-hero-glow polaris"></div>
+    <div class="container">
+      <div class="page-hero-content">
+        <div class="section-label justify-content-center d-inline-flex">Industry Pedigree · The Deep Chart</div>
+        <h1 class="page-hero-title">Star Chart</h1>
+        <p class="page-hero-sub">Shipped titles our team members have worked on across studios and platforms — every one a fixed star on the chart.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section-padding pt-4">
+    <div class="container">
+
+      {credits.length === 0 ? (
+        <div class="chart-empty text-center fade-in-up">
+          <div class="chart-empty-glyph">✦</div>
+          <h2 class="section-title">The chart is being drawn</h2>
+          <p class="section-sub mx-auto">The full credit roll is being compiled and verified. Check back soon — or ask us directly.</p>
+          <Cta href="/contact" variant="ghost" class="mt-3 d-inline-block">Get In Touch</Cta>
+        </div>
+      ) : (
+        <>
+          <div class="chart-filter fade-in-up" id="titleFilter" role="group" aria-label="Filter titles by platform">
+            <button class="chart-filter-btn active" data-platform="all" type="button"><span class="chart-filter-glyph" aria-hidden="true">✦</span>All</button>
+            {creditPlatforms.map((p) => (
+              <button class="chart-filter-btn" data-platform={p} data-brand={platformIcon[p]} type="button">
+                {platformIcon[p] && <PlatformIcon key={platformIcon[p]} />}{p}
+              </button>
+            ))}
+          </div>
+
+          <nav class="year-rail" id="yearRail" aria-label="Jump to a year">
+            <span class="year-rail-cap" aria-hidden="true">✦ Years</span>
+            <span class="year-rail-line" aria-hidden="true"></span>
+            {creditYears.map((year) => (
+              <a href={`#y-${year}`} class="year-rail-link" data-rail-year={year}>
+                <span class="year-rail-dot" aria-hidden="true">✦</span>
+                <span class="year-rail-label">{year}</span>
+              </a>
+            ))}
+          </nav>
+
+          <div class="chart-years">
+            {byYear.map(({ year, entries }) => (
+              <div class="chart-year" data-chart-year id={`y-${year}`}>
+                <div class="chart-year-head">
+                  <span class="chart-year-star" aria-hidden="true">✦</span>
+                  <span class="chart-year-label">{year}</span>
+                  <span class="chart-year-line" aria-hidden="true"></span>
+                </div>
+                <div class="chart-grid">
+                  {entries.map((c) => (
+                    <div class="chart-card" data-platforms={c.platforms.join('|')}>
+                      {c.video && (
+                        <button
+                          class="chart-video"
+                          type="button"
+                          data-video={c.video}
+                          aria-label={`Play the ${c.title} trailer`}
+                        >
+                          <img
+                            src={`https://i.ytimg.com/vi/${c.video}/hqdefault.jpg`}
+                            alt=""
+                            loading="lazy"
+                            width="480"
+                            height="360"
+                          />
+                          <span class="chart-video-play" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
+                          </span>
+                        </button>
+                      )}
+                      <div class="chart-card-title">{c.title}</div>
+                      <div class="chart-card-partner">{c.partner}</div>
+                      {c.note && <p class="chart-card-note">{c.note}</p>}
+                      <div class="chart-card-platforms">
+                        {c.platforms.map((p) => {
+                          const store = platformStore[p];
+                          const href = store && c.links && c.links[store];
+                          const mark = platformIcon[p] && <PlatformIcon key={platformIcon[p]} />;
+                          return href ? (
+                            <a
+                              class="tag tag-live"
+                              data-brand={platformIcon[p]}
+                              href={href}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title={`${c.title} on ${storeLabel[store]}`}
+                            >{mark}{p}</a>
+                          ) : (
+                            <span
+                              class="tag tag-pending"
+                              data-brand={platformIcon[p]}
+                              title={`No public store link for ${p} yet`}
+                            >{mark}{p}</span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <p class="logo-credit mt-5">
+            Credits reflect work by individual team members across their careers, at the studios named.
+            All titles and marks belong to their respective owners.
+          </p>
+        </>
+      )}
+
+    </div>
+  </section>
+
+</Base>

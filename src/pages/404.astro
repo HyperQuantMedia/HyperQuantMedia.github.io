@@ -1,0 +1,62 @@
+---
+// Served by the host for any path that resolves to nothing. GitHub Pages and
+// Cloudflare Pages both pick up /404.html automatically; the sitemap filter
+// in astro.config.mjs keeps it out of the index.
+import Base from '../layouts/Base.astro';
+import Cta from '../components/Cta.astro';
+---
+
+<Base
+  title="404 — Lost in Deep Space | HyperQuant Media"
+  description="This coordinate holds no world. Chart a course back to HyperQuant Media."
+  page="404"
+>
+
+  <section class="page-hero" style="min-height: 82vh; display: flex; align-items: center;">
+    <div class="page-hero-glow aurora"></div>
+    <div class="container">
+      <div class="page-hero-content text-center">
+        <div class="lost-code">404</div>
+        <h1 class="page-hero-title" style="font-size: clamp(1.6rem, 4vw, 2.6rem);">Lost in deep space</h1>
+        <p class="page-hero-sub">This coordinate holds no world. The page may have moved, or it may never have existed on any chart.</p>
+        <p class="lost-sub">// coordinate not found · field intact · navigation available</p>
+        <div class="d-flex flex-wrap gap-3 justify-content-center">
+          <Cta href="/">Return Home</Cta>
+          <Cta href="/contact" variant="ghost">Report a Broken Link</Cta>
+        </div>
+
+        <!-- The way out is above this line and always works. What follows is
+             for whoever would rather fly it themselves. -->
+        <div class="lost-game" data-lost-game>
+          <div class="lost-game-head">
+            <span class="lost-game-title">Fly the long way home</span>
+            <span class="lost-meta">
+              <span class="lost-status" aria-hidden="true">0 ly · best 0</span>
+              <span class="lost-life" aria-hidden="true">
+                <i class="lost-pip"></i><i class="lost-pip"></i><i class="lost-pip"></i>
+              </span>
+            </span>
+          </div>
+
+          <canvas class="lost-canvas" tabindex="0" role="application"
+                  aria-label="Endless flight. Steer the comet through the debris field and collect waypoints. Move with the pointer, a finger, or the arrow keys."></canvas>
+
+          <p class="lost-hint">Drag, or steer with the arrow keys. Collect waypoints, dodge debris — three knocks ends the run.</p>
+          <p class="lost-live visually-hidden" aria-live="polite"></p>
+
+          <div class="lost-over">
+            <p class="lost-over-title">Course lost.</p>
+            <p class="lost-over-stats"></p>
+            <div class="d-flex flex-wrap gap-2 justify-content-center">
+              <button type="button" class="lost-replay">Fly again</button>
+              <a href="/" class="lost-over-link">Return home →</a>
+            </div>
+          </div>
+
+          <p class="lost-still">Motion is off, so the course is drawn rather than flown. The links above still take you home.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</Base>

@@ -1,0 +1,102 @@
+---
+// A CTA capsule with a real scene inside it — the Star Chart voyage button
+// (Pedigree.astro) generalised so every call-to-action on the site is built
+// the same way: SVG geometry over a night-sky capsule, the label on top.
+//
+// The scene is animated in CSS rather than SMIL, so the site-wide
+// prefers-reduced-motion rule stops it like every other animation here.
+// Everything is coloured through tokens, so both themes work untouched.
+//
+// The scene follows the destination unless `scene` overrides it:
+//   /services   explore     -> a survey beam sweeps the field
+//   /cosmos     constellate -> a constellation draws itself between its stars
+//   /studio     forge       -> sparks rise off the forge floor
+//   /contact    signal      -> a pulse rings outward, answered by a blip
+//   /           home        -> the comet flies homeward, right to left
+//   anything else           -> the comet, outbound
+interface Props {
+  href: string;
+  variant?: 'primary' | 'ghost';
+  scene?: 'comet' | 'homeward' | 'scan' | 'constellate' | 'sparks' | 'pulse';
+  arrow?: boolean;
+  class?: string;
+  'aria-label'?: string;
+}
+
+const { href, variant = 'primary', scene, arrow = false, class: extra = '', ...rest } = Astro.props;
+
+function sceneFor(to: string) {
+  if (to === '/') return 'homeward';
+  if (to.startsWith('/services')) return 'scan';
+  if (to.startsWith('/cosmos')) return 'constellate';
+  if (to.startsWith('/studio')) return 'sparks';
+  if (to.startsWith('/contact')) return 'pulse';
+  return 'comet';
+}
+const kind = scene ?? sceneFor(href);
+const base = variant === 'ghost' ? 'btn-ghost-custom' : 'btn-primary-custom';
+
+// The starfield every scene sits in. Fixed positions, staggered twinkle.
+const stars = [
+  { cx: 18, cy: 12, r: 1.1 },
+  { cx: 52, cy: 38, r: 0.9 },
+  { cx: 88, cy: 9, r: 1.2 },
+  { cx: 121, cy: 41, r: 0.9 },
+  { cx: 152, cy: 15, r: 1.1 },
+  { cx: 186, cy: 36, r: 1 },
+  { cx: 208, cy: 20, r: 0.9 },
+];
+---
+
+<a href={href} class:list={['cta', base, `cta-${kind}`, extra]} {...rest}>
+  <svg class="cta-scene" viewBox="0 0 220 48" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <g class="cta-stars">
+      {stars.map((s) => <circle cx={s.cx} cy={s.cy} r={s.r} />)}
+    </g>
+
+    {(kind === 'comet' || kind === 'homeward') && (
+      <g class="cta-comet">
+        <path class="cta-comet-tail" d="M0,0 L-17,-2.1 L-17,2.1 Z" />
+        <circle class="cta-comet-head" cx="0" cy="0" r="1.7" />
+      </g>
+    )}
+
+    {kind === 'scan' && (
+      <g class="cta-beam">
+        <rect class="cta-beam-wash" x="-15" y="-8" width="30" height="64" />
+        <rect class="cta-beam-edge" x="-0.6" y="-8" width="1.2" height="64" />
+      </g>
+    )}
+
+    {kind === 'constellate' && (
+      <g class="cta-constellation">
+        <polyline class="cta-line" points="26,34 74,13 126,33 194,11" />
+        <circle class="cta-node" cx="26" cy="34" r="1.9" />
+        <circle class="cta-node" cx="74" cy="13" r="1.9" />
+        <circle class="cta-node" cx="126" cy="33" r="1.9" />
+        <circle class="cta-node" cx="194" cy="11" r="1.9" />
+      </g>
+    )}
+
+    {kind === 'sparks' && (
+      <g class="cta-forge">
+        <rect class="cta-forge-floor" x="0" y="38" width="220" height="10" />
+        <circle class="cta-spark" cx="28" cy="46" r="1.5" />
+        <circle class="cta-spark" cx="74" cy="46" r="1.2" />
+        <circle class="cta-spark" cx="112" cy="46" r="1.8" />
+        <circle class="cta-spark" cx="158" cy="46" r="1.3" />
+        <circle class="cta-spark" cx="196" cy="46" r="1.5" />
+      </g>
+    )}
+
+    {kind === 'pulse' && (
+      <g class="cta-signal">
+        <circle class="cta-ring" cx="110" cy="24" r="6" vector-effect="non-scaling-stroke" />
+        <circle class="cta-ring" cx="110" cy="24" r="6" vector-effect="non-scaling-stroke" />
+        <circle class="cta-ring" cx="110" cy="24" r="6" vector-effect="non-scaling-stroke" />
+        <circle class="cta-blip" cx="110" cy="24" r="2.1" />
+      </g>
+    )}
+  </svg>
+  <span class="cta-label"><slot />{arrow && <span class="cta-arrow" aria-hidden="true">→</span>}</span>
+</a>

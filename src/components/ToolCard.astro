@@ -1,0 +1,72 @@
+---
+import { Image } from 'astro:assets';
+import { statusLabel } from '../data/products.js';
+import ToolMotif from './ToolMotif.astro';
+import SocialIcon from './SocialIcon.astro';
+
+// One body in the Cosmos, in the site's panel card family. The cards run in a
+// single column, so the card is a two-part split: the reading column on the
+// left, the tool's motif in its own well on the right. Below the md breakpoint
+// it stacks, motif first.
+//
+// Cards carry `blurb` (one line) plus three capability chips rather than the
+// long paragraph — `long` stays in products.js for the per-tool pages.
+interface Props {
+  prod: Record<string, any>;
+  icon: any;
+}
+const { prod, icon } = Astro.props;
+---
+
+<article
+  id={prod.slug}
+  class:list={['tool-card', prod.accent, prod.accentAlt && `alt-${prod.accentAlt}`, `is-${prod.status}`]}
+>
+  <div class="tool-scene"><ToolMotif slug={prod.slug} /></div>
+
+  <div class="tool-body">
+  <div class="tool-head">
+    <Image src={icon} alt="" width={60} height={60} densities={[1, 2, 3]} class="tool-icon" loading="lazy" />
+    <div class="tool-titling">
+      <h3 class="tool-name">{prod.name}</h3>
+      <div class="tool-role">{prod.role}</div>
+    </div>
+  </div>
+
+  <p class="tool-blurb">{prod.blurb}</p>
+
+  <ul class="tool-chips">
+    {prod.chips.map((c: string) => <li>{c}</li>)}
+  </ul>
+
+  <div class="tool-foot">
+    <span class="tool-status"><span class="dot" aria-hidden="true"></span>{statusLabel[prod.status]}</span>
+
+    {(prod.href || prod.repo) && (
+      <div class="tool-actions">
+        {prod.href && (
+          <a href={prod.href} class="tool-shelf">
+            {/* Spines standing on a plank — and the button itself is a shelf:
+                its bottom border is the board they rest on. */}
+            <svg class="shelf-glyph" viewBox="0 0 26 18" aria-hidden="true">
+              <rect class="spine" x="1"    y="4" width="3"   height="11" rx="0.6" />
+              <rect class="spine" x="5.5"  y="2" width="3.5" height="13" rx="0.6" />
+              <rect class="spine tip" x="10.5" y="6" width="3" height="9" rx="0.6" />
+              <rect class="spine" x="15"   y="3" width="4"   height="12" rx="0.6" />
+              <rect class="spine" x="20.5" y="5" width="3"   height="10" rx="0.6" />
+              <rect class="plank" x="0" y="15.4" width="26" height="2.2" rx="1" />
+            </svg>
+            Browse the shelves
+          </a>
+        )}
+        {prod.repo && (
+          <a href={prod.repo} class="tool-repo" target="_blank" rel="noopener noreferrer">
+            <SocialIcon key="github" />
+            Repo
+          </a>
+        )}
+      </div>
+    )}
+  </div>
+  </div>
+</article>

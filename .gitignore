@@ -1,0 +1,20 @@
+# Astro
+dist/
+.astro/
+
+# Dependencies
+node_modules/
+
+# Scratch work (matches at any depth, per workspace rule R2)
+scratchpad/
+
+# Local convenience launcher, not part of the build
+serve.bat
+
+# Session handoff notes, local only
+WAYPOINT.md
+
+# Environment / editor
+.env
+.env.*
+.DS_Store

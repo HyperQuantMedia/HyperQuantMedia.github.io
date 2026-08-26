@@ -1,0 +1,152 @@
+---
+// The page shell: head, navbar, slotted content, footer, scripts.
+//
+// Every page goes through here, so head tags and the nav/footer are defined
+// once. The constellation canvas lives here too, so it is one continuous
+// field across the whole site rather than a home-page-only flourish.
+import { ClientRouter } from 'astro:transitions';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import BackToTop from '../components/BackToTop.astro';
+import { site, analytics } from '../data/site.js';
+import '../styles/style.css';
+
+// Title convention, so tabs and search results stay one family:
+//
+//   <Page> — <what it is> | HyperQuant Media      (every page)
+//   HyperQuant Media — <what we are>              (the homepage only)
+//
+// Em dash between the page and its descriptor, pipe before the brand, brand
+// last, and the whole thing under ~60 characters so search results do not
+// truncate it. The descriptor is not decoration - it is where the words
+// someone would actually search for belong.
+interface Props {
+  title: string;
+  description: string;
+  page: string;
+}
+const { title, description, page } = Astro.props;
+const canonical = new URL(Astro.url.pathname, site.url).href;
+const ogImage = new URL('/og.png', site.url).href;
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{title}</title>
+  <meta name="description" content={description} />
+  <link rel="canonical" href={canonical} />
+
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+  <meta name="theme-color" content="#04040c" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#f6f7fb" media="(prefers-color-scheme: light)" />
+
+  <!-- Runs before first paint so a stored theme choice never flashes the
+       other palette. Deliberately inline and un-deferred; nothing here can
+       wait for a bundle. No stored choice means no attribute, which leaves
+       the CSS to follow the system preference. -->
+  <script is:inline>
+    (function () {
+      try {
+        var stored = localStorage.getItem('hqm-theme');
+        if (stored === 'light' || stored === 'dark') {
+          document.documentElement.setAttribute('data-theme', stored);
+        }
+      } catch (e) {
+        /* private mode or storage disabled: fall through to system preference */
+      }
+
+      // Client-side navigation replaces <html>'s attributes with the ones
+      // from the incoming static page, which drops a theme chosen at
+      // runtime. Re-apply it the moment the swap lands, before paint.
+      document.addEventListener('astro:after-swap', function () {
+        try {
+          var t = localStorage.getItem('hqm-theme');
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) { /* same fallback as above */ }
+      });
+    })();
+  </script>
+
+  <meta property="og:title" content={title} />
+  <meta property="og:description" content={description} />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content={canonical} />
+  <meta property="og:site_name" content={site.name} />
+  <meta property="og:image" content={ogImage} />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="HyperQuant Media — logo mark and wordmark on a starfield" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content={ogImage} />
+
+  <!-- Client-side routing. The constellation canvas is marked
+       transition:persist below, so navigating swaps the page *inside* the
+       field instead of tearing the field down -- the whole site behaves as
+       one continuous space. Browsers without the View Transitions API just
+       get instant swaps; no-JS visitors get ordinary full loads. -->
+  <ClientRouter />
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=JetBrains+Mono:wght@400;500;700;800&family=Inter:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
+
+  <slot name="head" />
+
+  <!-- Visit analytics (Umami): renders only when a website id is configured
+       in src/data/site.js, so the codebase carries the wiring but ships no
+       tracker until the owner activates it. Cookieless; no consent banner
+       required. -->
+  {analytics.umami.websiteId && (
+    <script
+      defer
+      src={analytics.umami.src}
+      data-website-id={analytics.umami.websiteId}
+      is:inline
+    ></script>
+  )}
+</head>
+<body data-page={page}>
+
+  <!-- The constellation field, behind every page rather than only the home
+       hero. Sits in the layout so navigating never drops the reader out of
+       it. Decorative: aria-hidden, pointer-events none, and it degrades to
+       the CSS star wash if WebGL or JS is unavailable. -->
+  <canvas id="siteCanvas" aria-hidden="true" transition:persist="starfield"></canvas>
+
+  <!-- Reading-progress hairline. Driven from the same rAF scroll handler as
+       the navbar state in js/app.js. -->
+  <div id="scrollProgress" aria-hidden="true"></div>
+
+  <!-- Cursor comet trail: drawn above the content, where the starfield
+       canvas cannot reach. Persisted so mid-flight dust survives page
+       swaps. Decorative and untouchable. -->
+  <canvas id="cometCanvas" aria-hidden="true" transition:persist="comet"></canvas>
+
+  <Nav page={page} />
+
+  <slot />
+
+  <Footer />
+
+  <BackToTop />
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" is:inline></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js" is:inline></script>
+  <script src="/js/scene.js" is:inline></script>
+  <script src="/js/comet.js" is:inline></script>
+  <script src="/js/app.js" is:inline></script>
+  {/* The 404 minigame ships with the 404 page and nowhere else. It also
+      re-initialises on astro:page-load, since the client-side router can swap
+      into this page without re-running the file. */}
+  {page === '404' && <script src="/js/lost.js" is:inline></script>}
+</body>
+</html>

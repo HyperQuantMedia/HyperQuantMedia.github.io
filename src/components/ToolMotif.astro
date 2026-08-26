@@ -1,0 +1,169 @@
+---
+// A small scene per tool, showing what the tool does rather than decorating
+// the card. Same discipline as the CTA scenes: real geometry, tokens only,
+// CSS animation (never SMIL) so prefers-reduced-motion stops it.
+//
+// Motion is automatic, not solicited: each motif draws itself once when the
+// card scrolls into view (the .visible class app.js already adds for the
+// fade-ins gates it), and the one element that is the point of the tool keeps
+// a slow idle loop. Hover polishes; it never has to be the trigger.
+//
+// Each scene uses the same object the tool is drawn as in the constellation
+// above (ConstellationField.astro), in motion:
+//   warpgate      a wormhole, rings falling through a lit throat
+//   astra         a route charted between nodes
+//   docutale      a scroll of light
+//   afterglow     a strip in a nebula
+//   pulsar        a beam and its rings
+//   compendium    shelved light
+//   quartermaster tools floating free of any locker
+//
+// Ink: --accent is the tool's colour, --accent-2 its hot parts (they are the
+// same value unless the product declares an accentAlt).
+interface Props {
+  slug: string;
+}
+const { slug } = Astro.props;
+---
+
+<svg class={`tool-motif m-${slug}`} viewBox="0 0 120 60" fill="none" aria-hidden="true">
+  {slug === 'warpgate' && (
+    <g>
+      <g class="mw-manifest">
+        {[0, 1, 2, 3].map((r) =>
+          [0, 1, 2].map((c) => <circle cx={7 + c * 9} cy={13 + r * 11} r="1.1" />)
+        )}
+      </g>
+      <g class="mw-token t1"><rect x="-5.5" y="-2.6" width="11" height="5.2" rx="1.6" /></g>
+      <g class="mw-token t2"><rect x="-5.5" y="-2.6" width="11" height="5.2" rx="1.6" /></g>
+      <g class="mw-token t3"><rect x="-5.5" y="-2.6" width="11" height="5.2" rx="1.6" /></g>
+      <g class="mw-throat">
+        <g class="mw-rings">
+          <ellipse cx="88" cy="30" rx="26" ry="11" class="mw-ring" />
+          <ellipse cx="88" cy="30" rx="18" ry="7.4" class="mw-ring" />
+          <ellipse cx="88" cy="30" rx="10" ry="4.2" class="mw-ring" />
+        </g>
+        <circle class="mw-core" cx="88" cy="30" r="2.6" />
+      </g>
+    </g>
+  )}
+
+  {slug === 'astra' && (
+    <g>
+      <polyline class="ma-route" points="12,46 34,28 58,38 82,16 106,26" />
+      <circle class="ma-node" cx="12" cy="46" r="2.4" />
+      <circle class="ma-node" cx="34" cy="28" r="2.4" />
+      <circle class="ma-node" cx="58" cy="38" r="2.4" />
+      <circle class="ma-node" cx="82" cy="16" r="2.4" />
+      <circle class="ma-node" cx="106" cy="26" r="2.4" />
+      <circle class="ma-sweep" cx="0" cy="0" r="4.2" />
+    </g>
+  )}
+
+  {slug === 'docutale' && (
+    <g>
+      <g class="md-dense">
+        {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+          <rect style={`--i:${i}`} x="6" y={8 + i * 6} width={i % 3 === 0 ? 38 : 32} height="2" rx="1" />
+        ))}
+      </g>
+      <path class="md-arrow" d="M50,30 L60,30 M56,26 L60,30 L56,34" />
+      {/* The distillation on a loop: a spark leaves the dense block, crosses
+          the arrow, and lands in the scroll — the kept lines light behind it. */}
+      <circle class="md-spark" r="1.9" />
+      <g class="md-scroll">
+        <rect class="md-sheet" x="68" y="12" width="44" height="36" rx="4" />
+        <path class="md-curl" d="M68,12 a5,18 0 0 0 0,36" />
+        <path class="md-curl" d="M112,12 a5,18 0 0 1 0,36" />
+        <line class="md-kept" x1="77" y1="22" x2="104" y2="22" />
+        <line class="md-kept" x1="77" y1="30" x2="98" y2="30" />
+        <line class="md-kept" x1="77" y1="38" x2="102" y2="38" />
+      </g>
+    </g>
+  )}
+
+  {slug === 'afterglow' && (
+    <g>
+      <g class="mg-neb">
+        <circle cx="30" cy="32" r="20" />
+        <circle cx="78" cy="26" r="17" />
+      </g>
+      {/* One perforation row per edge, each running two sprockets past the
+          viewBox so the marching loop — exactly one 9.4 pitch — closes on
+          itself with no gap at the right. */}
+      {[10, 46].map((y) => (
+        <g class="mg-perf">
+          {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13].map((i) => (
+            <rect x={7 + i * 9.4} y={y} width="3" height="3" rx="0.8" />
+          ))}
+        </g>
+      ))}
+      <g class="mg-strip">
+        {[0, 1, 2, 3, 4, 5, 6].map((i) => (
+          <rect class={i === 1 || i === 3 || i === 6 ? 'mg-frame picked' : 'mg-frame'}
+                style={`--f:${i}`}
+                x={6 + i * 16} y="18" width="12" height="22" rx="2" />
+        ))}
+      </g>
+    </g>
+  )}
+
+  {slug === 'pulsar' && (
+    <g>
+      <line class="mp-base" x1="6" y1="50" x2="114" y2="50" />
+      <g class="mp-pulses">
+        <circle class="mp-pulse" cx="65" cy="18" r="5" />
+        <circle class="mp-pulse" cx="65" cy="18" r="5" />
+      </g>
+      <path class="mp-trace" d="M6,42 L26,42 L30,42 L33,18 L36,42 L58,42 L62,42 L65,18 L68,42 L90,42 L94,42 L97,18 L100,42 L114,42" />
+      <circle class="mp-beat" cx="33" cy="18" r="2.6" />
+      <circle class="mp-beat" cx="65" cy="18" r="2.6" />
+      <circle class="mp-beat" cx="97" cy="18" r="2.6" />
+    </g>
+  )}
+
+  {slug === 'compendium' && (
+    <g>
+      <g class="mc-sky">
+        {[[16, 8], [52, 6], [96, 9], [34, 54], [78, 55], [110, 52]].map(([x, y]) => (
+          <circle cx={x} cy={y} r="1" />
+        ))}
+      </g>
+      <g class="mc-shelves">
+        {[0, 1, 2].map((row) => (
+          <g class="mc-shelf">
+            <line class="mc-rail" x1="8" y1={24 + row * 13} x2="112" y2={24 + row * 13} />
+            {/* Each book carries both of its cues: --pop when it is shelved on
+                arrival, --lamp for its turn under the light that keeps
+                travelling the shelves. A shorthand delay in the stylesheet
+                would hit both animations, so the timing lives here. */}
+            {[0, 1, 2, 3, 4, 5, 6].map((i) => (
+              <rect class="mc-book"
+                    style={`--pop:${(0.2 + row * 0.3).toFixed(2)}s; --lamp:${(1.5 + row * 0.18 + i * 0.16).toFixed(2)}s`}
+                    x={10 + i * 14.5 + (i % 3)} y={24 + row * 13 - 9 - (i % 2) * 2}
+                    width={5 + (i % 3)} height={9 + (i % 2) * 2} rx="1" />
+            ))}
+          </g>
+        ))}
+      </g>
+    </g>
+  )}
+
+  {slug === 'quartermaster' && (
+    <g>
+      {/* No locker: the tools float free, because each one is portable and
+          owes nothing to the others. */}
+      <g class="mq-rig">
+        <path class="mq-tool" d="M14,46 L36,26" />
+        <path class="mq-head" d="M42,18 a7.5,7.5 0 1 0 4.8,8.6 L38.4,26.6 Z" />
+        <path class="mq-tool mq-driver" d="M46,48 L26,28" />
+        <rect class="mq-grip" x="14" y="16" width="10" height="6" rx="2"
+              transform="rotate(-45 19 19)" />
+        <circle class="mq-bolt" cx="30" cy="36" r="2.2" />
+      </g>
+      <g class="mq-float f1"><rect x="70" y="20" width="9" height="20" rx="2.2" /></g>
+      <g class="mq-float f2"><rect x="86" y="20" width="9" height="20" rx="2.2" /></g>
+      <g class="mq-float f3"><rect x="102" y="20" width="9" height="20" rx="2.2" /></g>
+    </g>
+  )}
+</svg>

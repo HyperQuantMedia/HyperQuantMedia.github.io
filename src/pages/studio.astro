@@ -1,0 +1,227 @@
+---
+import Base from '../layouts/Base.astro';
+import { Image } from 'astro:assets';
+import { titles, counts, statusLabel } from '../data/products.js';
+import Cta from '../components/Cta.astro';
+
+const modules = import.meta.glob('../assets/products/*.png', {
+  eager: true,
+  import: 'default',
+});
+const icons = Object.fromEntries(
+  Object.entries(modules).map(([path, img]) => [
+    path.split('/').pop().replace('.png', ''),
+    img,
+  ]),
+);
+
+const missing = titles.filter((t) => !icons[t.slug]).map((t) => t.slug);
+if (missing.length) {
+  throw new Error(`Missing title icons for: ${missing.join(', ')}`);
+}
+---
+
+<Base
+  title="Studio — Game Development | HyperQuant Media"
+  description="HyperQuant Media's internal studio. Games in development alongside the developer tools of our Cosmos, all built under real shipping pressure."
+  page="studio"
+>
+
+<!-- Page Hero -->
+  <section class="page-hero">
+    <div class="page-hero-glow aurora"></div>
+    <div class="container">
+      <div class="page-hero-content">
+        <div class="section-label justify-content-center d-inline-flex">Forge Games · Build Builders</div>
+        <h1 class="page-hero-title">The Studio</h1>
+        <p class="page-hero-sub">Our internal game development arm — where the philosophy we sell to clients is the one we live by every day.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Studio Intro -->
+  <section class="section-padding">
+    <div class="container">
+      <div class="row align-items-center g-5">
+        <div class="col-lg-6 fade-in-left">
+          <div class="section-label">Who We Are</div>
+          <h2 class="section-title title-cascade">
+            <span>Small studio.</span>
+            <span>Adaptive philosophy.</span>
+            <span>Ambitious games.</span>
+          </h2>
+          <p class="section-body">
+            HyperQuant's game studio runs on one core belief: great developers are forged, not hired.
+            We build our team's capability by putting them through real production — not training programs,
+            not assigned specializations, but actual shipping pressure.
+          </p>
+          <p class="section-body">
+            The result is a team that understands games from the inside out. And because our developers
+            work on production every day, that same maturity shows up in every client project we take on.
+          </p>
+          <div class="stat-row mt-4">
+            <div class="stat-item">
+              <span class="stat-number c-nebula">{counts.titlesInDevelopment}</span>
+              <span class="stat-label">{counts.titlesInDevelopment === 1 ? 'Title' : 'Titles'} in Development</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-number c-rose">{counts.toolsInDevelopment}</span>
+              <span class="stat-label">Tools in Development</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-number c-aurora">0</span>
+              <span class="stat-label">Mandatory Crunch</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-number c-polaris">∞</span>
+              <span class="stat-label">Ambition</span>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-5 offset-lg-1 fade-in-right">
+          <div class="belief-block">
+            {/* An eight-point star: four long rays on the cardinals, four short
+                on the diagonals, drawn with concave sides so it reads as light
+                rather than as a polygon. Cold blue-white on purpose — this is
+                the one mark on the page that is a star and not the brand's
+                gold glyph. */}
+            <svg class="belief-mark" viewBox="0 0 48 48" aria-hidden="true">
+              <path d="M 24.00 3.00 Q 25.15 21.23 32.49 15.51 Q 26.77 22.85 45.00 24.00 Q 26.77 25.15 32.49 32.49 Q 25.15 26.77 24.00 45.00 Q 22.85 26.77 15.51 32.49 Q 21.23 25.15 3.00 24.00 Q 21.23 22.85 15.51 15.51 Q 22.85 21.23 24.00 3.00 Z" />
+            </svg>
+            <blockquote class="belief-quote">
+              “Greatness is not primarily hired. It is forged through adaptive pressure inside the correct evolutionary environment.”
+            </blockquote>
+            <cite class="belief-source">— The Adaptive Studio Philosophy</cite>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Titles in Development -->
+  <section class="section-padding band">
+    <div class="container">
+      <div class="text-center fade-in-up mb-5">
+        <div class="section-label justify-content-center d-inline-flex">In Development</div>
+        <h2 class="section-title">Titles in development</h2>
+      </div>
+      <div class="row g-4 justify-content-center">
+        {titles.map((title, i) => (
+          <div class={`col-lg-6 fade-in-up delay-${i + 1}`}>
+            <div class={`project-card featured-project ${title.accent}`}>
+              <div class="project-status-badge">{statusLabel[title.status]}</div>
+              <div class="project-inner">
+                <Image src={icons[title.slug]} alt="" width={64} height={64} densities={[1, 2, 3]} class="project-icon" loading="lazy" />
+                <h3 class="project-name">{title.name}</h3>
+                <p class="project-genre">{title.role}</p>
+                {title.detail.map((para) => <p class="project-desc">{para}</p>)}
+                <div class="project-tags">
+                  {title.tags.map((t) => <span class="tag">{t}</span>)}
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- How We Build — Adaptive Studio -->
+  <section class="section-padding">
+    <div class="container">
+      <div class="text-center fade-in-up mb-5">
+        <div class="section-label justify-content-center d-inline-flex">The Adaptive Studio</div>
+        <h2 class="section-title">How we build</h2>
+        <p class="section-sub mx-auto">Every feature moves through three phases. The team never idles.</p>
+      </div>
+      <div class="row g-4">
+        <div class="col-md-4 fade-in-up delay-1">
+          <div class="principle-card a-nebula">
+            <div class="principle-accent"></div>
+            <h3 class="principle-title">Explore</h3>
+            <p class="principle-body">
+              The explore phase is about finding out if something is possible. Speed over structure.
+              Technical debt is expected and intentional — buying speed now with the explicit intent
+              to pay it back in stabilize.
+            </p>
+            <ul class="tool-chips principle-chips">
+              <li>Discover</li>
+              <li>Prototype</li>
+              <li>Prove it works</li>
+            </ul>
+          </div>
+        </div>
+        <div class="col-md-4 fade-in-up delay-2">
+          <div class="principle-card a-aurora">
+            <div class="principle-accent"></div>
+            <h3 class="principle-title">Stabilize</h3>
+            <p class="principle-body">
+              Stabilize takes what explore found and makes it something the codebase can build on.
+              Not new features — cleaning, refactoring, naming correctly, fitting the work into the
+              patterns the rest of the codebase already uses.
+            </p>
+            <ul class="tool-chips principle-chips">
+              <li>Refactor</li>
+              <li>Structure</li>
+              <li>Build on it</li>
+            </ul>
+          </div>
+        </div>
+        <div class="col-md-4 fade-in-up delay-3">
+          <div class="principle-card a-polaris">
+            <div class="principle-accent"></div>
+            <h3 class="principle-title">Converge</h3>
+            <p class="principle-body">
+              Convergence happens when teams close the cycle. Cross-check, transfer knowledge, align vocabulary,
+              update documentation. Without it, knowledge stays locked in whoever built it — and the team fragments.
+            </p>
+            <ul class="tool-chips principle-chips">
+              <li>Align</li>
+              <li>Share</li>
+              <li>Make it everyone's</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="pipeline-table fade-in-up mt-5">
+        <div class="pipeline-header">The Pipeline — at any moment, four layers run simultaneously</div>
+        <div class="pipeline-row">
+          <div class="pipeline-layer">Feature N-1</div>
+          <div class="pipeline-status">Stable</div>
+          <div class="pipeline-activity">Part of the codebase — everyone can build on it</div>
+        </div>
+        <div class="pipeline-row">
+          <div class="pipeline-layer c-polaris">Feature N</div>
+          <div class="pipeline-status c-polaris">Converge</div>
+          <div class="pipeline-activity">Both teams converging</div>
+        </div>
+        <div class="pipeline-row">
+          <div class="pipeline-layer c-aurora">Feature N+1</div>
+          <div class="pipeline-status c-aurora">Stabilize</div>
+          <div class="pipeline-activity">Stabilize team hardening the work</div>
+        </div>
+        <div class="pipeline-row">
+          <div class="pipeline-layer c-nebula">Feature N+2</div>
+          <div class="pipeline-status c-nebula">Explore</div>
+          <div class="pipeline-activity">Explore team prototyping</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section section-padding">
+    <div class="container">
+      <div class="cta-block text-center fade-in-up">
+        <h2 class="cta-title">Interested in working with us?</h2>
+        <p class="cta-sub">// build a game, or leverage our team's production experience for your project</p>
+        <div class="d-flex gap-3 justify-content-center flex-wrap mt-3">
+          <Cta href="/services#games">Game Dev Services</Cta>
+          <Cta href="/contact" variant="ghost">Get In Touch</Cta>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</Base>
