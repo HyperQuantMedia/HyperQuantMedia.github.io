@@ -7,6 +7,7 @@
 // navigation — it is a shelf inside the Cosmos, not a top-level world.
 import Base from '../layouts/Base.astro';
 import { kinds, entryCount, statusMeaning } from '../data/compendium.js';
+import { compendiumListNodes } from '../data/schema.js';
 import LinkIcon from '../components/LinkIcon.astro';
 
 // Destinations render as icons, not words. The kind is derived from the label
@@ -48,8 +49,9 @@ function destinations(e) {
 
 <Base
   title="Compendium — Tools We Rate | HyperQuant Media"
-  description="A curated, independent compendium of third-party software HyperQuant Media rates — applications, libraries, Unreal plugins, Visual Studio extensions, and learning resources, each with its cost, platform, and why we like it."
+  description="An independent compendium of third-party software HyperQuant Media rates — apps, libraries, engine plugins, and learning resources, with cost and platform."
   page="compendium"
+  schema={compendiumListNodes(kinds)}
 >
 
 <!-- Page Hero -->

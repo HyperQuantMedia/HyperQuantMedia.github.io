@@ -4,6 +4,7 @@ import { tools } from '../data/products.js';
 import Cta from '../components/Cta.astro';
 import ToolCard from '../components/ToolCard.astro';
 import ConstellationField from '../components/ConstellationField.astro';
+import { toolListNodes } from '../data/schema.js';
 
 const modules = import.meta.glob('../assets/products/*.png', {
   eager: true,
@@ -26,6 +27,7 @@ if (missing.length) {
   title="Cosmos — Developer Tools We Build | HyperQuant Media"
   description="Cosmos — HyperQuant Media's constellation of tools. Each one stands alone, built in-house and sharpened on our own production before it is pointed outward."
   page="cosmos"
+  schema={toolListNodes(tools)}
 >
 
 <!-- Page Hero -->

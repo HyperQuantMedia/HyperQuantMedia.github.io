@@ -2,37 +2,23 @@
 import Base from '../layouts/Base.astro';
 import Pedigree from '../components/Pedigree.astro';
 import Cta from '../components/Cta.astro';
-import { site, socialLinks, email } from '../data/site.js';
-
-// Organization schema for search engines, on the homepage only. Everything
-// in it is drawn from src/data/site.js so it cannot drift from the visible
-// site.
-const orgSchema = {
-  '@context': 'https://schema.org',
-  '@type': 'Organization',
-  name: site.name,
-  url: site.url,
-  description: site.description,
-  logo: new URL('/icon-512.png', site.url).href,
-  email: email.general,
-  sameAs: socialLinks.map((s) => s.href),
-};
+import { services } from '../data/services.js';
+import { serviceListNodes } from '../data/schema.js';
 ---
 
 <Base
   title="HyperQuant Media — Creative Technology & Developer Tools"
-  description="HyperQuant Media builds immersive games, AR/VR experiences, applied AI, and bespoke websites — and forges its own constellation of developer tools. Creative technology for brands that want to lead."
+  description="HyperQuant Media builds immersive games, AR/VR experiences, applied AI, and bespoke websites — and forges its own constellation of developer tools."
   page="home"
+  schema={serviceListNodes(services)}
 >
-  <script type="application/ld+json" set:html={JSON.stringify(orgSchema)} slot="head" is:inline />
-
 <!-- Hero -->
   <section id="home" class="hero-section">
     <div class="hero-overlay"></div>
     <div class="hero-content container">
       <div class="hero-badge">Creative Technology <span class="badge-sep" aria-hidden="true">✦</span> Developer Tools <span class="badge-sep" aria-hidden="true">✦</span> Interactive Experiences</div>
       <h1 class="hero-title">
-        <span class="title-line">We Chart the</span>
+        <span class="title-line">We Chart the</span>{' '}
         <span class="title-line title-accent">Uncharted</span>
       </h1>
       <p class="hero-tagline">Bespoke digital products, a constellation of developer tools, and experiences people move through.</p>
@@ -54,56 +40,18 @@ const orgSchema = {
         <p class="section-sub mx-auto">From the product you're imagining to the website your brand deserves — we design and build it.</p>
       </div>
       <div class="service-grid">
-        <div class="fade-in-up delay-1">
-          <a href="/services#games" class="service-card-link">
-            <div class="service-card a-aurora">
-              <div class="service-icon">◉</div>
-              <h3 class="service-card-title">Immersive Game Development</h3>
-              <p class="service-card-body">Graphics and rendering, artist and editor tooling, engine and platform work. Unreal, custom engines, Unity, Godot.</p>
-              <span class="service-link">Learn more →</span>
-            </div>
-          </a>
-        </div>
-        <div class="fade-in-up delay-2">
-          <a href="/services#xr" class="service-card-link">
-            <div class="service-card a-polaris">
-              <div class="service-icon">◇</div>
-              <h3 class="service-card-title">Interactive XR Experiences</h3>
-              <p class="service-card-body">AR/VR content, simulations, and immersive installations that change how people engage.</p>
-              <span class="service-link">Learn more →</span>
-            </div>
-          </a>
-        </div>
-        <div class="fade-in-up delay-3">
-          <a href="/services#ai" class="service-card-link">
-            <div class="service-card a-rose">
-              <div class="service-icon">✦</div>
-              <h3 class="service-card-title">Applied AI &amp; Agent Systems</h3>
-              <p class="service-card-body">Agent workflows, retrieval, and AI features built into real products — not demos.</p>
-              <span class="service-link">Learn more →</span>
-            </div>
-          </a>
-        </div>
-        <div class="fade-in-up delay-4">
-          <a href="/services#web" class="service-card-link">
-            <div class="service-card a-nebula">
-              <div class="service-icon">◈</div>
-              <h3 class="service-card-title">Bespoke Web Development</h3>
-              <p class="service-card-body">Custom, high-performance websites engineered from your goals. No templates, no page builders.</p>
-              <span class="service-link">Learn more →</span>
-            </div>
-          </a>
-        </div>
-        <div class="fade-in-up delay-4">
-          <a href="/services#consulting" class="service-card-link">
-            <div class="service-card a-stellar">
-              <div class="service-icon">⬡</div>
-              <h3 class="service-card-title">Strategic IT Consulting</h3>
-              <p class="service-card-body">Infrastructure, delivery, and technology decisions made clear for the road ahead.</p>
-              <span class="service-link">Learn more →</span>
-            </div>
-          </a>
-        </div>
+        {services.map((svc, i) => (
+          <div class={`fade-in-up delay-${Math.min(i + 1, 4)}`}>
+            <a href={svc.anchor} class="service-card-link">
+              <div class={`service-card ${svc.accent}`}>
+                <div class="service-icon">{svc.icon}</div>
+                <h3 class="service-card-title">{svc.name}</h3>
+                <p class="service-card-body">{svc.blurb}</p>
+                <span class="service-link">Learn more →</span>
+              </div>
+            </a>
+          </div>
+        ))}
       </div>
     </div>
   </section>

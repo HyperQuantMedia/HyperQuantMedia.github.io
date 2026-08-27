@@ -2,7 +2,7 @@
 import Base from '../layouts/Base.astro';
 import Brand from '../components/Brand.astro';
 import SocialIcon from '../components/SocialIcon.astro';
-import { socialLinks } from '../data/site.js';
+import { site, socialLinks } from '../data/site.js';
 ---
 
 <Base
@@ -92,7 +92,7 @@ import { socialLinks } from '../data/site.js';
 
           <div class="contact-info-item">
             <div class="ci-label c-polaris">Location</div>
-            <span class="ci-value">India</span>
+            <span class="ci-value">{site.location}</span>
           </div>
 
           <div class="contact-social mt-4">

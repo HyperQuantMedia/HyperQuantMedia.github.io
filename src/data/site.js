@@ -15,6 +15,13 @@ export const site = {
     'We chart the uncharted — creative technology, developer tools, and interactive experiences.',
   description:
     'Creative technology, developer tools, and interactive experiences — built to make complex work navigable.',
+  // Where the studio is. The Contact page states this publicly, so the
+  // Organization structured data can state it too — country only, because
+  // country is all the site actually publishes. ISO 3166-1 alpha-2 for the
+  // machine-readable half; both come from here so the visible page and the
+  // JSON-LD cannot disagree.
+  location: 'India',
+  countryCode: 'IN',
 };
 
 // Order is the display order, in the navbar and the footer both. The theme

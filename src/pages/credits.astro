@@ -8,6 +8,7 @@ import Base from '../layouts/Base.astro';
 import PlatformIcon from '../components/PlatformIcon.astro';
 import Cta from '../components/Cta.astro';
 import { credits, creditPlatforms, creditYears } from '../data/credits.js';
+import { creditListNodes } from '../data/schema.js';
 
 // Platform-name -> icon key for the filter pills and the per-title platform
 // tags. 'All' gets the brand's own star glyph instead of a platform mark.
@@ -50,6 +51,7 @@ const byYear = creditYears.map((year) => ({
   title="Credits — Titles We've Shipped | HyperQuant Media"
   description="Shipped titles that members of the HyperQuant Media team have worked on across studios, platforms, and years."
   page="credits"
+  schema={creditListNodes(credits)}
 >
 
 <!-- Page Hero -->

@@ -9,6 +9,7 @@ import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
 import BackToTop from '../components/BackToTop.astro';
 import { site, analytics } from '../data/site.js';
+import { pageGraph } from '../data/schema.js';
 import '../styles/style.css';
 
 // Title convention, so tabs and search results stay one family:
@@ -24,20 +25,30 @@ interface Props {
   title: string;
   description: string;
   page: string;
+  /* Extra JSON-LD nodes to append to this page's @graph. Built by the helpers
+     in src/data/schema.js from the same data the page renders, so the markup
+     and the structured data cannot drift. */
+  schema?: object[];
+  /* Keep the page out of the index while still following its links. Only the
+     404 needs it: GitHub Pages already answers 404.html with a 404 status, and
+     this is the belt to that braces. */
+  noindex?: boolean;
 }
-const { title, description, page } = Astro.props;
+const { title, description, page, schema = [], noindex = false } = Astro.props;
 const canonical = new URL(Astro.url.pathname, site.url).href;
 const ogImage = new URL('/og.png', site.url).href;
+const graph = pageGraph({ page, title, description, canonical, nodes: schema });
 ---
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-GB">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{title}</title>
   <meta name="description" content={description} />
   <link rel="canonical" href={canonical} />
+  {noindex && <meta name="robots" content="noindex, follow" />}
 
   <link rel="icon" href="/favicon.ico" sizes="any" />
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
@@ -83,6 +94,9 @@ const ogImage = new URL('/og.png', site.url).href;
   <meta property="og:type" content="website" />
   <meta property="og:url" content={canonical} />
   <meta property="og:site_name" content={site.name} />
+  <!-- The prose is British English (centre, colour, licence, optimisation),
+       so the locale says so rather than defaulting to en_US. -->
+  <meta property="og:locale" content="en_GB" />
   <meta property="og:image" content={ogImage} />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
@@ -124,6 +138,13 @@ const ogImage = new URL('/og.png', site.url).href;
   <link rel="preload" href="/vendor/fonts/inter-normal-latin.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="preload" href="/vendor/fonts/space-mono-normal-latin.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="stylesheet" href="/vendor/fonts/fonts.css" />
+
+  <!-- Structured data as ONE @graph, not a pile of blocks: Organization and
+       WebSite are declared once with stable @ids and everything else points at
+       them, so a crawler seeing nine pages sees one company and one site
+       rather than nine near-identical guesses. Built in src/data/schema.js
+       from the same data the page renders. -->
+  <script type="application/ld+json" set:html={JSON.stringify(graph)} is:inline />
 
   <slot name="head" />
 
