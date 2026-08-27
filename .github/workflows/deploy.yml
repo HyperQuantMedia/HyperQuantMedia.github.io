@@ -29,10 +29,15 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: withastro/action@v3
+      - uses: actions/checkout@v7
+      # withastro/action bundles checkout/setup-node/upload-pages-artifact
+      # internally, so its version is what decides whether this workflow trips
+      # the runner's Node 20 deprecation warning. v3 did; v6 does not.
+      - uses: withastro/action@v6
         with:
-          node-version: 22
+          # Pinned to match the Node the site is developed and built on
+          # locally (24.x). astro requires >=22.12.0.
+          node-version: 24
 
   deploy:
     needs: build
@@ -42,4 +47,4 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
