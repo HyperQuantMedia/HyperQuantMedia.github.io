@@ -12,10 +12,19 @@ interface Props {
   size?: 'nav' | 'footer' | 'lg';
 }
 const { size = 'nav' } = Astro.props;
+// The mark's size in CSS px. It is published to CSS as --brand-mark-base so the
+// wordmark can size itself against it: three lines of type occupying exactly
+// the mark's height is the lockup's own composition, and hand-tuned font sizes
+// per context drifted from it by 0.5-2.7px depending on where it was rendered.
+//
+// It is --brand-mark-BASE, not --brand-mark, deliberately: an inline style beats
+// any stylesheet selector, so publishing the final value here would have made
+// the below-lg shrink in style.css unreachable. CSS derives --brand-mark from
+// this and stays free to override it per width.
 const px = { nav: 36, footer: 32, lg: 64 }[size];
 ---
 
-<span class={`brand-lockup brand-${size}`}>
+<span class={`brand-lockup brand-${size}`} style={`--brand-mark-base: ${px}px`}>
   <Image src={mark} alt="" width={px} height={px} densities={[1, 2, 3]} class="brand-mark" loading="eager" />
   <span class="brand-word"><span>Hyper</span><span>Quant</span><span>Media</span></span>
 </span>

@@ -33,7 +33,10 @@ const copyright = year > founded ? `${founded}-${year}` : `${founded}`;
       </div>
       <div class="col-sm-6 col-lg-4">
         <h2 class="footer-heading">Navigation</h2>
-        <ul class="footer-links">
+        {/* Two balanced columns: seven links one-per-row made this the tallest
+            thing in the footer at every width. The class carries the layout so
+            the Contact list below, which has two entries, keeps one column. */}
+        <ul class="footer-links footer-links-2col">
           {nav.map((item) => (
             <li><a href={item.href}>{item.label}</a></li>
           ))}

@@ -417,19 +417,42 @@ em { font-style: italic; }
 /* Brand block: lockup stacked over its social row. */
 .brand-block { display: flex; flex-direction: column; gap: 5px; }
 
-.brand-lockup { display: inline-flex; align-items: center; gap: 10px; }
+/* --brand-mark is derived from the inline --brand-mark-base Brand.astro sets,
+   rather than being that inline value: an inline style outranks every selector,
+   so the below-lg shrink further down could never have taken effect. */
+.brand-lockup { display: inline-flex; align-items: center; gap: 10px; --brand-mark: var(--brand-mark-base); }
 .brand-mark {
   display: block;
   flex: none;
+  /* Sized from the same variable as the wordmark, so the two can never fall
+     out of step -- including in the media query below, which changes the
+     variable rather than these two lengths. */
+  width: var(--brand-mark);
+  height: var(--brand-mark);
   /* The glow is the logo's own blue, not a theme accent: the mark stays
      the same blue in both themes, so its halo does too. */
   filter: drop-shadow(0 0 10px rgba(3, 116, 229, 0.28));
 }
 /* Three lines, per the brand asset's own composition: HYPER / QUANT / MEDIA.
    One colour; the mark beside it carries the brand blue. */
+/* Three lines of type occupying exactly the mark's height -- the lockup's own
+   composition. Both halves come off --brand-mark, set per size in Brand.astro:
+
+     height        pins the box to the mark, so the match is exact whatever the
+                   font metrics do;
+     font-size     is the size at which three lines naturally fill that box
+                   (3 lines x 1.12 line-height = 3.36), so space-between has
+                   only rounding left to distribute rather than opening real
+                   gaps between the words.
+
+   It was three hand-set font sizes before, and they ran 0.5-2.7px short of the
+   mark depending on which lockup and which width you measured. */
 .brand-word {
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
+  height: var(--brand-mark);
+  font-size: calc(var(--brand-mark) / 3.36);
   line-height: 1.12;
   font-family: var(--font-brand);
   font-weight: 800;
@@ -438,9 +461,7 @@ em { font-style: italic; }
   letter-spacing: 0.09em;
   color: var(--star);
 }
-.brand-nav .brand-word    { font-size: 0.62rem; }
-.brand-footer .brand-word { font-size: 0.56rem; }
-.brand-lg .brand-word     { font-size: 1.02rem; letter-spacing: 0.12em; }
+.brand-lg .brand-word     { letter-spacing: 0.12em; }
 
 .brand-social { display: flex; align-items: center; gap: 4px; }
 /* Optically align the icon row with the wordmark, not the mark. The negative
@@ -502,8 +523,7 @@ em { font-style: italic; }
    a little more room than the old text-only lockup needed. */
 @media (max-width: 991.98px) {
   .brand-block { gap: 0; }
-  .brand-nav .brand-mark { width: 30px; height: 30px; }
-  .brand-nav .brand-word { font-size: 0.55rem; }
+  .brand-nav { --brand-mark: 30px; }
 
   /* The collapse menu now sits on the nav's own opaque ground, which means it
      can no longer be dismissed by reading through it -- so it must never be
@@ -2543,6 +2563,20 @@ a.ci-value:hover { color: var(--star); }
   transition: color var(--transition);
 }
 .footer-links a:hover { color: var(--star); }
+
+/* The navigation list, two balanced columns. Multicolumn rather than a grid so
+   the column count is not coupled to the link count: site.js can grow to nine
+   links and this stays two columns instead of silently becoming three.
+   display:block is required -- the base .footer-links is a flex column and flex
+   layout ignores `columns` entirely -- which also means the flex `gap` no longer
+   applies, hence the per-item margin. */
+.footer-links-2col {
+  display: block;
+  columns: 2;
+  column-gap: 22px;
+}
+.footer-links-2col li { break-inside: avoid; }
+.footer-links-2col li:not(:last-child) { margin-bottom: 8px; }
 .footer-bottom { border-top: 1px solid var(--line-faint); padding: 20px 0; }
 .footer-bottom p { font-family: var(--font-mono); font-size: 0.74rem; color: var(--star-faint); margin: 0; text-align: center; }
 
