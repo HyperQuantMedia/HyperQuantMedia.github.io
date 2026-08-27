@@ -71,7 +71,11 @@
   --dust-5: rgba(255,255,255,0.50);
   --dust-6: rgba(255,255,255,0.40);
 
-  --nav-scrim:        rgba(7, 7, 26, 0.72);   /* = --veil: the nav is a band like any other */
+  /* The nav is opaque, not a scrim: a fixed bar with content sliding under it
+     is unreadable the moment the content behind it is busy, and on phones the
+     backdrop blur that used to hide that either costs a compositor pass or is
+     dropped outright. Solid --space in dark, solid --veil ground in light. */
+  --nav-scrim:        #07071a;
   --hero-scrim:       rgba(4, 4, 12, 0.55);
   --shadow-hard:      rgba(0, 0, 0, 0.90);
   --shadow-soft:      rgba(0, 0, 0, 0.70);
@@ -177,7 +181,7 @@
     --dust-5: rgba(30, 38, 90, 0.24);
     --dust-6: rgba(30, 38, 90, 0.18);
 
-    --nav-scrim:       rgba(246, 247, 251, 0.80);  /* = --veil */
+    --nav-scrim:       #f6f7fb;                    /* opaque; see the dark note */
     --hero-scrim:      rgba(238, 241, 248, 0.55);
     --shadow-hard:     rgba(18, 22, 56, 0.22);
     --shadow-soft:     rgba(18, 22, 56, 0.16);
@@ -249,7 +253,7 @@
   --dust-5: rgba(30, 38, 90, 0.24);
   --dust-6: rgba(30, 38, 90, 0.18);
 
-  --nav-scrim:       rgba(246, 247, 251, 0.80);  /* = --veil */
+  --nav-scrim:       #f6f7fb;                    /* opaque; see the dark note */
   --hero-scrim:      rgba(238, 241, 248, 0.55);
   --shadow-hard:     rgba(18, 22, 56, 0.22);
   --shadow-soft:     rgba(18, 22, 56, 0.16);
@@ -355,16 +359,27 @@ em { font-style: italic; }
 .bg-aurora  { background-color: var(--aurora); }
 
 /* ── Navbar ── */
+/* Solid at every scroll position, not only once scrolled. The transparent-over-
+   hero state read well on a wide desktop and badly everywhere else: the nav links
+   sat on whatever the hero happened to be painting, and on phones the open
+   collapse menu -- which lives inside this element -- inherited the same
+   transparency and let the page show straight through the menu.
+
+   Only the padding and the bottom edge change on scroll now, so there is no
+   background cross-fade to catch a repaint on. No backdrop-filter: with an
+   opaque ground there is nothing behind to blur, and the filter was forcing a
+   compositor pass on exactly the devices least able to afford one. */
 #mainNav {
   padding: 18px 0;
-  transition: background var(--transition), padding var(--transition), box-shadow var(--transition);
-  background: transparent;
+  transition: padding var(--transition), box-shadow var(--transition);
+  background: var(--nav-scrim);
+  /* The hairline is permanent now, not a scrolled-state flourish: an opaque bar
+     against an almost-equally-dark page needs a declared bottom edge or it
+     reads as a rendering seam. */
+  box-shadow: 0 1px 0 var(--line-faint);
 }
 
 #mainNav.scrolled {
-  background: var(--nav-scrim);
-  backdrop-filter: blur(20px) saturate(140%);
-  -webkit-backdrop-filter: blur(20px) saturate(140%);
   padding: 11px 0;
   box-shadow: 0 1px 0 var(--line-faint), 0 20px 50px -30px var(--shadow-hard);
 }
@@ -441,6 +456,18 @@ em { font-style: italic; }
   .brand-block { gap: 0; }
   .brand-nav .brand-mark { width: 30px; height: 30px; }
   .brand-nav .brand-word { font-size: 0.55rem; }
+
+  /* The collapse menu now sits on the nav's own opaque ground, which means it
+     can no longer be dismissed by reading through it -- so it must never be
+     taller than the screen. In phone landscape the six links plus the social
+     row are taller than the whole viewport; cap and scroll rather than run the
+     last links off the bottom. svh, not vh, so a mobile URL bar sliding away
+     does not change the cap mid-gesture. */
+  #mainNav .navbar-collapse {
+    max-height: 70svh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
 }
 
 .brand-star {
@@ -2294,7 +2321,8 @@ body.field-live::before { opacity: 0; }
      the cards below carry the names. */
   .field-label { display: none; }
   .field-legend { font-size: 0.76rem; }
-  .tool-card { flex-direction: column; align-items: stretch; gap: 18px; padding: 24px 22px; }
+
+    .tool-card { flex-direction: column; align-items: stretch; gap: 18px; padding: 24px 22px; }
   .tool-scene { flex: none; }
   .tool-icon { width: 52px; height: 52px; }
   .tool-blurb { font-size: 1rem; }
@@ -3113,6 +3141,9 @@ a.ci-value:hover { color: var(--star); }
   .belief-block { padding: 26px 18px; }
   .belief-mark { width: 38px; height: 38px; }
 }
+
+@media (max-width: 575.98px) {
+  }
 
 @media (max-width: 480px) {
   .title-line { font-size: clamp(2rem, 11vw, 3rem); }

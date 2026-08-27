@@ -43,7 +43,10 @@ const ogImage = new URL('/og.png', site.url).href;
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-  <meta name="theme-color" content="#04040c" media="(prefers-color-scheme: dark)" />
+  <!-- Matches the solid navbar ground (--nav-scrim), not the page floor: on a
+       phone the browser chrome sits directly above the fixed bar, so those two
+       colours meeting is the seam the reader actually sees. -->
+  <meta name="theme-color" content="#07071a" media="(prefers-color-scheme: dark)" />
   <meta name="theme-color" content="#f6f7fb" media="(prefers-color-scheme: light)" />
 
   <!-- Runs before first paint so a stored theme choice never flashes the
