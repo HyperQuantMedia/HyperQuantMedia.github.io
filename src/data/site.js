@@ -25,7 +25,7 @@ export const nav = [
   { href: '/services', label: 'Services', key: 'services' },
   { href: '/cosmos', label: 'Cosmos', key: 'cosmos' },
   { href: '/studio', label: 'Studio', key: 'studio' },
-  { href: '/titles', label: 'Credits', key: 'titles' },
+  { href: '/credits', label: 'Credits', key: 'credits' },
   { href: '/contact', label: 'Get In Touch', key: 'contact', cta: true },
 ];
 

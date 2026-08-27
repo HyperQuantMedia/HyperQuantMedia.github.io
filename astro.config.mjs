@@ -31,6 +31,10 @@ export default defineConfig({
     '/home': '/',
     // Ecosystem was renamed to Cosmos.
     '/ecosystem': '/cosmos',
+    // The Star Chart moved to /credits, which is what the navbar has always
+    // called it. The old path was public for a matter of hours, but a URL
+    // that shipped is a URL that has to keep working.
+    '/titles': '/credits',
   },
 
   build: {

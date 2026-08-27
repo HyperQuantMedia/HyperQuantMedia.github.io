@@ -2408,7 +2408,7 @@ a.ci-value:hover { color: var(--star); }
 .service-card.a-rose    { --accent-dim: var(--rose-dim); }
 .service-card.a-stellar { --accent-dim: var(--stellar-dim); }
 
-/* ── Star Chart (titles) ── */
+/* ── Star Chart (credits) ── */
 /* The voyage button: a capsule window into space. The scene is an inline
    SVG (stars, a dashed course, a ship on an animateMotion loop along that
    course); everything colours through tokens so both themes work. */

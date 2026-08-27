@@ -11,6 +11,10 @@
 /ecosystem      /cosmos     301
 /ecosystem.html /cosmos     301
 
+# The Star Chart moved to the name the navbar already used
+/titles         /credits    301
+/titles.html    /credits    301
+
 # Old hand-written .html URLs
 /index.html     /           301
 /services.html  /services   301
