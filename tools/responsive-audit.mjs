@@ -132,14 +132,39 @@ function measure({ inset, phoneMax, navCollapseBelow }) {
     return n.tagName.toLowerCase() + id + cls;
   };
 
-  // Horizontal overflow, named.
+  /* Horizontal overflow, named -- and separately, content CLIPPED.
+
+   * These are two different failures and only one of them scrolls. This site
+   * sets html{overflow-x:clip} and body{overflow-x:hidden}, and several
+   * sections carry overflow:hidden of their own, so anything running past the
+   * viewport is cropped instead of extending the scroll width. That made
+   * documentElement.scrollWidth structurally blind: it read 0 while the hero
+   * badge was losing 83px of its text at 320px. The list below was already
+   * being computed and then thrown away, used only to name the source of a
+   * scroll overflow that could never fire.
+   *
+   * The gate is OWN TEXT. A wrapper inherits its children's text, so
+   * textContent would report the whole ancestor chain; a text node belonging
+   * to the element itself is the thing a reader actually loses. Measured
+   * across all nine pages at five phone widths, that gate returns exactly the
+   * real defects and nothing else -- the decorative `.page-hero-glow`, the
+   * Bootstrap `.row` negative gutters and inner SVG nodes all legitimately sit
+   * past the edge and carry no text of their own. */
   const wide = [];
+  const clipped = [];
   doc.querySelectorAll('body *').forEach((n) => {
     const r = n.getBoundingClientRect();
     if (r.height <= 0) return;
-    if (r.right > vw + 1 || r.left < -1) {
-      wide.push(`${label(n)} [${Math.round(r.left)}..${Math.round(r.right)}]`);
-    }
+    if (r.right <= vw + 1 && r.left >= -1) return;
+    wide.push(`${label(n)} [${Math.round(r.left)}..${Math.round(r.right)}]`);
+    const own = Array.from(n.childNodes)
+      .filter((c) => c.nodeType === 3)
+      .map((c) => c.textContent.trim())
+      .filter(Boolean)
+      .join(' ');
+    if (!own) return;
+    const past = Math.round(Math.max(0, r.right - vw) + Math.max(0, -r.left));
+    clipped.push(`${label(n)} "${own.slice(0, 30)}" loses ${past}px`);
   });
 
   // Tap targets, phone widths only.
@@ -188,12 +213,29 @@ function measure({ inset, phoneMax, navCollapseBelow }) {
   const visible = (n) => !!n && n.getBoundingClientRect().height > 0;
   const expectCollapsed = vw < navCollapseBelow;
 
+  /* The theme control and the social row must be reachable WITHOUT opening the
+   * menu, at every width. Both used to live inside .navbar-collapse, so on
+   * anything under 992px -- tablets included -- neither existed until the
+   * hamburger was opened, and no check here noticed. The toggle also renders
+   * twice (bar below lg, nav list at lg and up), so exactly one must be laid
+   * out: getClientRects is the question that respects a hidden ancestor, which
+   * a computed-display read on the button itself does not. */
+  const laidOut = (n) => n.getClientRects().length > 0;
+  const themeToggles = Array.from(doc.querySelectorAll('.theme-toggle'));
+  const themeShown = themeToggles.filter(laidOut).length;
+  const socialShown = Array.from(doc.querySelectorAll('.brand-social-link'))
+    .filter((n) => laidOut(n) && !n.closest('.navbar-collapse')).length;
+
   return {
     vw,
     overflow: Math.max(0, doc.documentElement.scrollWidth - vw),
     wide: [...new Set(wide)].slice(0, 6),
+    clipped: [...new Set(clipped)].slice(0, 6),
     small: [...new Set(small)].slice(0, 8),
     navBg, navOpaque, navTop, navBottom, underInset, coversInset,
+    themeShown,
+    themeTotal: themeToggles.length,
+    socialShown,
     togglerVisible: visible(toggler),
     desktopSocialVisible: visible(desktopSocial),
     expectCollapsed,
@@ -340,7 +382,7 @@ for (const engineName of engineNames) {
         thirdParty.add(`${host}${new URL(url).pathname}`);
       });
 
-      let worst = 0, navOk = true, navOpaqueOk = true;
+      let worst = 0, navOk = true, navOpaqueOk = true, clipOk = true, chromeOk = true;
 
       for (const p of pages) {
         const where = `${engineName}/${theme}/${prof.n} ${p}`;
@@ -363,6 +405,18 @@ for (const engineName of engineNames) {
         if (r.overflow > 0) {
           findings.push(`${where}: horizontal overflow ${r.overflow}px — ${r.wide.join(' ; ') || 'source not identified'}`);
           worst = Math.max(worst, r.overflow);
+        }
+        if (r.themeShown !== 1) {
+          findings.push(`${where}: ${r.themeShown} theme controls laid out (of ${r.themeTotal} in the DOM), expected exactly 1 reachable without opening the menu`);
+          chromeOk = false;
+        }
+        if (r.socialShown < 1) {
+          findings.push(`${where}: no social link is reachable outside the collapsed menu`);
+          chromeOk = false;
+        }
+        if (r.clipped.length) {
+          findings.push(`${where}: text clipped past the viewport edge — ${r.clipped.join(' ; ')}`);
+          clipOk = false;
         }
         if (r.small.length) findings.push(`${where}: tap target under 24px — ${r.small.join(' ; ')}`);
         if (r.navOpaque === false) {
@@ -410,6 +464,11 @@ for (const engineName of engineNames) {
 
       const state = [
         worst ? `overflow=${worst}` : 'overflow=0',
+        /* Next to overflow on purpose: overflow=0 with clip=CROPPED is exactly
+           the state that read as clean while the hero badge was losing 83px of
+           its text at 320px. */
+        `clip=${clipOk ? 'ok' : 'CROPPED'}`,
+        `chrome=${chromeOk ? 'ok' : 'BURIED'}`,
         `nav=${navOk ? 'ok' : 'WRONG'}`,
         `header=${navOpaqueOk ? 'opaque' : 'TRANSLUCENT'}`,
       ].join('  ');
@@ -434,5 +493,5 @@ if (unique.length) {
   if (wantShots) console.log(`\nScreenshots: ${shotDir}`);
   process.exit(1);
 }
-console.log('\nClean: no overflow, no undersized tap target, no translucent header, no nav-mode error, no script error.');
+console.log('\nClean: no overflow, no clipped text, no undersized tap target, no translucent header, no nav-mode error, no script error.');
 if (wantShots) console.log(`Screenshots: ${shotDir}`);

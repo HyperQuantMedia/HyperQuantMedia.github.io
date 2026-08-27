@@ -369,6 +369,24 @@ em { font-style: italic; }
    background cross-fade to catch a repaint on. No backdrop-filter: with an
    opaque ground there is nothing behind to blur, and the filter was forcing a
    compositor pass on exactly the devices least able to afford one. */
+/* Below lg the bar row is its own positioned, single-line box -- see the
+   comment in Nav.astro: centring against the whole container put the social
+   row in the middle of the OPEN MENU, because an out-of-flow child of a flex
+   container is aligned by its align-items (center) and the container grows to
+   hold the collapse. At lg the wrapper dissolves with display:contents, so the
+   desktop bar is the same flex row it always was and the collapse still shares
+   the line with the brand. */
+#mainNav .nav-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+@media (min-width: 992px) {
+  #mainNav .nav-row { display: contents; }
+}
+
 #mainNav {
   padding: 18px 0;
   transition: padding var(--transition), box-shadow var(--transition);
@@ -443,12 +461,42 @@ em { font-style: italic; }
 .brand-social-link svg { width: 17px; height: 17px; display: block; }
 .brand-social-link:hover { color: var(--polaris); background: var(--polaris-dim); }
 
-.mobile-social {
-  border-top: 1px solid var(--line-faint);
-  gap: 8px;
+/* Below lg the bar carries what used to be locked inside the collapsed menu:
+   the social row and the theme control. Both were inside .navbar-collapse, so
+   neither existed until the hamburger was opened -- at every width under
+   992px, tablets included. .mobile-social (the in-menu row) is gone with it.
+
+   The social row is centred on the BAR, not between its neighbours: an auto
+   margin would centre it in the leftover space, which moves as the brand
+   lockup changes width. Absolute, so it also cannot push the brand or the
+   controls around. pointer-events stay on the links only, so the invisible
+   full-width band cannot swallow a tap meant for the bar. */
+.nav-social-center {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  align-items: center;
+  gap: 0;
+  pointer-events: none;
 }
-.mobile-social .brand-social-link { width: 38px; height: 38px; }
-.mobile-social .brand-social-link svg { width: 20px; height: 20px; }
+.nav-social-center .brand-social-link { pointer-events: auto; }
+
+/* The theme control sits hard against the menu button: the two chrome
+   controls read as a pair, which is where it was asked for. */
+.nav-utility {
+  align-items: center;
+  margin-left: auto;
+  margin-right: 6px;
+}
+
+/* 320px is the binding width: the brand lockup, four centred icons, the theme
+   control and the hamburger all share one row. Hit areas stay at 27px so they
+   still clear WCAG 2.5.8's 24, and only the glyphs and gaps give. */
+@media (max-width: 400px) {
+  .nav-social-center .brand-social-link { width: 27px; height: 27px; }
+  .nav-social-center .brand-social-link svg { width: 15px; height: 15px; }
+  .nav-utility { margin-right: 2px; }
+}
 
 /* The stacked brand is taller than a single line, so the scrolled navbar keeps
    a little more room than the old text-only lockup needed. */
@@ -618,8 +666,17 @@ body.field-live::before { opacity: 0; }
   padding: 120px 20px 80px;
 }
 
+/* Three phrases and their separators on one line come to 383px, which is wider
+   than every phone in the device table. It used to run straight past the edge
+   and .hero-section's overflow:hidden cropped it silently -- nothing scrolled,
+   so no scroll-based check could see it. Wrapping plus a width cap is the fix;
+   the tightening below keeps it to two lines on a phone rather than three. */
 .hero-badge {
   display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 100%;
+  text-align: center;
   align-items: center;
   gap: 9px;
   font-family: var(--font-mono);
@@ -636,8 +693,29 @@ body.field-live::before { opacity: 0; }
 }
 /* All three stars in the badge are the same size: the leading glyph and
    the separators are the same rank. */
-.hero-badge::before { content: '✦'; font-size: 0.7rem; }
-.badge-sep { font-size: 0.7rem; }
+/* The star belongs to its phrase, not to the space between phrases. Three
+   items each with a leading star renders identically to the old
+   ::before-plus-two-separators on one line, and survives a wrap: the star and
+   its text are one flex item and cannot be split. */
+.badge-item { display: inline-flex; align-items: center; gap: 9px; }
+.badge-item::before { content: '✦'; font-size: 0.7rem; }
+
+/* On a phone the pill is two or three lines, so one phrase per line with its
+   own star reading down the left edge -- a centred column would stagger the
+   stars and lose that. */
+@media (max-width: 767.98px) {
+  .hero-badge {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 10px 18px;
+    letter-spacing: 0.1em;
+    text-align: left;
+  }
+}
+@media (max-width: 400px) {
+  .hero-badge { padding: 10px 14px; }
+}
 
 .hero-title {
   font-family: var(--font-display);
@@ -2059,10 +2137,15 @@ body.field-live::before { opacity: 0; }
   border-radius: 7px;
 }
 
+/* Wraps because at 320px the status plus both action buttons came to more than
+   the card is wide, and the card's own overflow:hidden cropped the Repo link.
+   margin-left:auto on .tool-actions still right-aligns them on a shared line
+   and is neutralised below once they have a line of their own. */
 .tool-foot {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 18px;
+  gap: 12px 18px;
 }
 .tool-status {
   font-family: var(--font-mono);
@@ -2083,7 +2166,8 @@ body.field-live::before { opacity: 0; }
 /* Card actions. The shelf link is built like a shelf: the button's bottom
    border is the board, and the spines stand on it. One spine is pulled out on
    hover, the way you take a book down. */
-.tool-actions { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+.tool-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-left: auto; }
+@media (max-width: 575.98px) { .tool-actions { margin-left: 0; } }
 
 .tool-shelf,
 .tool-repo {

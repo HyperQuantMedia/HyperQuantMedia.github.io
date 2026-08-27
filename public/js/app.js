@@ -209,9 +209,12 @@
        handled entirely in CSS. Clicking stores an explicit choice, resolved
        against what is actually being displayed right now rather than against
        the stored value -- otherwise the first click from the system default
-       can be a no-op. */
-    const themeBtn = document.getElementById('themeToggle');
-    if (themeBtn) {
+       can be a no-op.
+
+       There are TWO toggles in the DOM -- one in the bar for below-lg, one in
+       the nav list for lg and up -- so this binds by class, not by id. Both
+       resolve against the live theme, so neither can drift from the other. */
+    document.querySelectorAll('.theme-toggle').forEach((themeBtn) => {
       themeBtn.addEventListener('click', () => {
         const theme = activeTheme() === 'dark' ? 'light' : 'dark';
         document.documentElement.setAttribute('data-theme', theme);
@@ -221,7 +224,7 @@
         // Let the starfield recolour itself for the new ground.
         window.dispatchEvent(new CustomEvent('hqm:themechange', { detail: { theme } }));
       });
-    }
+    });
 
     /* Active nav link — read the page key the layout stamped on <body>.
        Deriving it from the URL instead breaks on clean URLs: '/contact/'

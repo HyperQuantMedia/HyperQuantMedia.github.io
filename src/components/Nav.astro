@@ -15,14 +15,47 @@ const { page } = Astro.props;
 <nav class="navbar navbar-expand-lg fixed-top" id="mainNav">
   <div class="container">
 
-    <!-- Brand block: lockup with the social row beneath it. The row is its own
-         set of links rather than nested inside the home anchor, since anchors
-         cannot legally contain anchors. -->
-    <div class="brand-block">
-      <a class="navbar-brand" href="/" aria-label="HyperQuant Media — home">
-        <Brand />
-      </a>
-      <div class="brand-social d-none d-lg-flex" aria-label="HyperQuant Media on social platforms">
+    <!-- The bar row is its own positioned box. The centred social row is
+         absolutely positioned, and an out-of-flow child of a flex container is
+         aligned by that container's align-items -- which is `center`. With the
+         collapse in the same container, opening the menu made the container
+         tall and the social row drifted to the middle of the open menu, over
+         the links. Wrapping the bar row gives the centring a box that is only
+         ever one row high. At lg the wrapper becomes `display: contents`, so
+         the desktop layout is byte-for-byte the flex row it was before. -->
+    <div class="nav-row">
+      <!-- Brand block: lockup with the social row beneath it. The row is its own
+           set of links rather than nested inside the home anchor, since anchors
+           cannot legally contain anchors. -->
+      <div class="brand-block">
+        <a class="navbar-brand" href="/" aria-label="HyperQuant Media — home">
+          <Brand />
+        </a>
+        <div class="brand-social d-none d-lg-flex" aria-label="HyperQuant Media on social platforms">
+          {socialLinks.map((s) => (
+            <a
+              href={s.href}
+              class="brand-social-link"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={s.label}
+              title={s.label}
+            ><SocialIcon key={s.key} /></a>
+          ))}
+        </div>
+      </div>
+
+      <!-- Below lg, theme and socials ride the bar rather than the collapsed
+           menu. They used to live inside .navbar-collapse, so on a phone the
+           theme control did not exist until you opened the hamburger -- and the
+           collapse starts at 992px, so that included tablet widths.
+
+           The social row is centred in the bar on its own; the theme control is
+           pinned directly beside the menu button. Centring is absolute rather
+           than a flex margin, because a flex auto-margin centres in whatever
+           space the brand and the right-hand controls leave over, which is not
+           the centre of the bar and drifts with the brand's width. -->
+      <div class="nav-social-center d-flex d-lg-none" aria-label="HyperQuant Media on social platforms">
         {socialLinks.map((s) => (
           <a
             href={s.href}
@@ -34,19 +67,22 @@ const { page } = Astro.props;
           ><SocialIcon key={s.key} /></a>
         ))}
       </div>
+
+      <div class="nav-utility d-flex d-lg-none">
+        <ThemeToggle />
+      </div>
+
+      <button
+        class="navbar-toggler"
+        type="button"
+        data-nav-toggle="#navbarNav"
+        aria-controls="navbarNav"
+        aria-expanded="false"
+        aria-label="Toggle navigation"
+      >
+        <span class="toggler-icon"></span><span class="toggler-icon"></span><span class="toggler-icon"></span>
+      </button>
     </div>
-
-    <button
-      class="navbar-toggler"
-      type="button"
-      data-nav-toggle="#navbarNav"
-      aria-controls="navbarNav"
-      aria-expanded="false"
-      aria-label="Toggle navigation"
-    >
-      <span class="toggler-icon"></span><span class="toggler-icon"></span><span class="toggler-icon"></span>
-    </button>
-
     <div class="collapse navbar-collapse" id="navbarNav">
       <ul class="navbar-nav ms-auto gap-1 align-items-lg-center">
         {nav.map((item) => (
@@ -59,23 +95,9 @@ const { page } = Astro.props;
             >{item.label}</a>
           </li>
         ))}
-        <li class="nav-item ms-lg-2 mt-2 mt-lg-0"><ThemeToggle /></li>
+        <li class="nav-item ms-lg-2 d-none d-lg-block"><ThemeToggle /></li>
       </ul>
 
-      <!-- Below lg the brand-side row is hidden, so the same links ride the
-           collapsed menu instead. -->
-      <div class="brand-social d-flex d-lg-none mt-3 pt-3 mobile-social">
-        {socialLinks.map((s) => (
-          <a
-            href={s.href}
-            class="brand-social-link"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={s.label}
-            title={s.label}
-          ><SocialIcon key={s.key} /></a>
-        ))}
-      </div>
     </div>
   </div>
 </nav>

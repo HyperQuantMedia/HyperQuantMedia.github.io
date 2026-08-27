@@ -16,7 +16,15 @@ import { serviceListNodes } from '../data/schema.js';
   <section id="home" class="hero-section">
     <div class="hero-overlay"></div>
     <div class="hero-content container">
-      <div class="hero-badge">Creative Technology <span class="badge-sep" aria-hidden="true">✦</span> Developer Tools <span class="badge-sep" aria-hidden="true">✦</span> Interactive Experiences</div>
+      <!-- Each phrase carries its own star, rather than the stars being loose
+           separators between bare text nodes. Anonymous flex items cannot be
+           styled or kept together, so on a phone the old markup wrapped with a
+           star stranded at the end of a line, separating nothing. -->
+      <div class="hero-badge">
+        <span class="badge-item">Creative Technology</span>
+        <span class="badge-item">Developer Tools</span>
+        <span class="badge-item">Interactive Experiences</span>
+      </div>
       <h1 class="hero-title">
         <span class="title-line">We Chart the</span>{' '}
         <span class="title-line title-accent">Uncharted</span>
