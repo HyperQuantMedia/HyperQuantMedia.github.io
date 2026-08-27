@@ -784,6 +784,29 @@ body.field-live::before { opacity: 0; }
   max-width: 560px;
 }
 
+/* In-prose links. The global `a` rule strips colour and underline, which is
+   right for cards, nav and CTAs — every one of those is already visibly a
+   control — and wrong inside body copy, where an unmarked link is invisible.
+   Gold is the site's own link semantic: --warn's comment says gold "would
+   read as a link", so this makes that reading true. Both theme blocks define
+   --polaris with its measured contrast (5.5:1 in light), so no per-theme rule
+   is needed here. The underline is offset and thin so a link inside a
+   1.8-line-height paragraph does not thicken the line it sits on. */
+.prose-link {
+  color: var(--polaris);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  text-decoration-color: color-mix(in srgb, var(--polaris) 45%, transparent);
+  transition: color 0.2s ease, text-decoration-color 0.2s ease;
+}
+.prose-link:hover,
+.prose-link:focus-visible {
+  color: var(--polaris-bright);
+  text-decoration-color: currentColor;
+}
+.prose-link:focus-visible { outline: 2px solid var(--polaris); outline-offset: 2px; border-radius: 2px; }
+
 /* Prose under a centred heading. .section-body is capped at 560px and
    centred with mx-auto, which is right for a centred lede but wrong once
    the text is left-aligned: the block floats mid-column and its left edge
