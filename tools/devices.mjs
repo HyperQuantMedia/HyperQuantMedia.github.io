@@ -17,31 +17,42 @@
  * `inset` is the status-bar / notch band in CSS px. devview paints it as an
  * overlay so anything that would hide under it is visible; the audit uses it
  * to check the fixed header clears it.
+ *
+ * `dpr` is the device's real device-pixel-ratio. It matters on this site in
+ * exactly two places, and it is worth knowing which: the three canvases
+ * (scene.js, comet.js, lost.js) size their backing store by it, and every
+ * <Image> ships a 1x/2x/3x srcset the engine picks from. Nothing in style.css
+ * branches on resolution, so no layout depends on it.
+ *
+ * Where a profile has a `pw` descriptor these values match Playwright's
+ * deviceScaleFactor for it, so the headless run and the harness agree.
+ * Laptop values are the common panel for that CSS width (1366 and 1920 are
+ * 1x panels; 1280 and 1512 are the 2x MacBook widths).
  */
 
 export const DEVICES = [
   // ── Phones ────────────────────────────────────────────────
-  { g: 'phone', n: 'small-320',      w: 320,  h: 568,  inset: 20, note: 'smallest width still in the wild' },
-  { g: 'phone', n: 'iphone-se',      w: 375,  h: 667,  inset: 20, pw: 'iPhone SE' },
-  { g: 'phone', n: 'iphone-13',      w: 390,  h: 844,  inset: 47, pw: 'iPhone 13', on: true },
-  { g: 'phone', n: 'iphone-15-pro',  w: 393,  h: 852,  inset: 59, pw: 'iPhone 15 Pro' },
-  { g: 'phone', n: 'pixel-7',        w: 412,  h: 915,  inset: 40, pw: 'Pixel 7', on: true },
-  { g: 'phone', n: 'iphone-max',     w: 430,  h: 932,  inset: 59, pw: 'iPhone 15 Pro Max' },
-  { g: 'phone', n: 'galaxy-s24u',    w: 480,  h: 1068, inset: 40 },
+  { g: 'phone', n: 'small-320',      w: 320,  h: 568,  dpr: 2,    inset: 20, note: 'smallest width still in the wild' },
+  { g: 'phone', n: 'iphone-se',      w: 375,  h: 667,  dpr: 2,    inset: 20, pw: 'iPhone SE' },
+  { g: 'phone', n: 'iphone-13',      w: 390,  h: 844,  dpr: 3,    inset: 47, pw: 'iPhone 13', on: true },
+  { g: 'phone', n: 'iphone-15-pro',  w: 393,  h: 852,  dpr: 3,    inset: 59, pw: 'iPhone 15 Pro' },
+  { g: 'phone', n: 'pixel-7',        w: 412,  h: 915,  dpr: 2.625, inset: 40, pw: 'Pixel 7', on: true },
+  { g: 'phone', n: 'iphone-max',     w: 430,  h: 932,  dpr: 3,    inset: 59, pw: 'iPhone 15 Pro Max' },
+  { g: 'phone', n: 'galaxy-s24u',    w: 480,  h: 1068, dpr: 3,    inset: 40 },
 
   // ── Tablets ───────────────────────────────────────────────
-  { g: 'tablet', n: 'ipad-mini',     w: 744,  h: 1133, inset: 24, pw: 'iPad Mini' },
-  { g: 'tablet', n: 'ipad-10.9',     w: 820,  h: 1180, inset: 24, on: true },
-  { g: 'tablet', n: 'ipad-pro-11',   w: 834,  h: 1194, inset: 24, pw: 'iPad Pro 11' },
-  { g: 'tablet', n: 'ipad-pro-12.9', w: 1024, h: 1366, inset: 24 },
+  { g: 'tablet', n: 'ipad-mini',     w: 744,  h: 1133, dpr: 2,    inset: 24, pw: 'iPad Mini' },
+  { g: 'tablet', n: 'ipad-10.9',     w: 820,  h: 1180, dpr: 2,    inset: 24, on: true },
+  { g: 'tablet', n: 'ipad-pro-11',   w: 834,  h: 1194, dpr: 2,    inset: 24, pw: 'iPad Pro 11' },
+  { g: 'tablet', n: 'ipad-pro-12.9', w: 1024, h: 1366, dpr: 2,    inset: 24 },
 
   // ── Desktop ───────────────────────────────────────────────
-  { g: 'desktop', n: 'laptop-1280',  w: 1280, h: 800,  inset: 0, on: true },
-  { g: 'desktop', n: 'laptop-1366',  w: 1366, h: 768,  inset: 0 },
-  { g: 'desktop', n: 'macbook-1512', w: 1512, h: 982,  inset: 0 },
-  { g: 'desktop', n: 'desktop-1920', w: 1920, h: 1080, inset: 0, on: true },
-  { g: 'desktop', n: 'qhd-2560',     w: 2560, h: 1440, inset: 0 },
-  { g: 'desktop', n: 'ultrawide',    w: 3440, h: 1440, inset: 0 },
+  { g: 'desktop', n: 'laptop-1280',  w: 1280, h: 800,  dpr: 2,    inset: 0, on: true },
+  { g: 'desktop', n: 'laptop-1366',  w: 1366, h: 768,  dpr: 1,    inset: 0 },
+  { g: 'desktop', n: 'macbook-1512', w: 1512, h: 982,  dpr: 2,    inset: 0 },
+  { g: 'desktop', n: 'desktop-1920', w: 1920, h: 1080, dpr: 1,    inset: 0, on: true },
+  { g: 'desktop', n: 'qhd-2560',     w: 2560, h: 1440, dpr: 1,    inset: 0 },
+  { g: 'desktop', n: 'ultrawide',    w: 3440, h: 1440, dpr: 1,    inset: 0 },
 ];
 
 /* Breakpoint edges. Layouts break at a boundary far more often than in the
@@ -51,7 +62,7 @@ export const DEVICES = [
 export const EDGE_WIDTHS = [575, 576, 767, 768, 991, 992, 1199, 1200];
 
 export const EDGES = EDGE_WIDTHS.map((w) => ({
-  g: 'edges', n: 'edge-' + w, w, h: 900, inset: 0,
+  g: 'edges', n: 'edge-' + w, w, h: 900, dpr: 1, inset: 0,
 }));
 
 export const ALL = DEVICES.concat(EDGES);
@@ -62,6 +73,12 @@ export const PATHS = [
   '/', '/vision', '/services', '/cosmos', '/studio', '/credits',
   '/compendium', '/contact', '/404',
 ];
+
+/* The device-pixel-ratio steps devview's dpr dropdown offers. 2.625 is in the
+ * list because it is Pixel 7's real value and the odd fractional ones are
+ * where half-pixel canvas seams show up; 4 is not, because nothing shipping
+ * reports it and both canvas paths clamp at 2 anyway. */
+export const DPR_STEPS = [1, 1.5, 2, 2.625, 3];
 
 /* Phone-class widths. Below this, tap-target and collapsed-nav checks apply. */
 export const PHONE_MAX = 500;

@@ -35,6 +35,35 @@ queries, container queries and layout all behave. Not a resized window.
 - **path / theme / zoom** — theme is *forced* into each frame (this works only
   because the harness is served same-origin with the site; over `file://` every
   frame would be cross-origin and the harness would be a wall of pictures).
+  `zoom` is presentation only: the iframe keeps its real pixel size and is
+  merely scaled to fit on screen.
+- **device** — solos one profile; `(wall)` leaves the checkbox row alone. It is a
+  shortcut into the same selection the checkboxes drive, not a second source of
+  truth. Each entry shows its viewport and its real density.
+- **size** — the viewport in CSS px. `device` lets every frame use its own;
+  anything else overrides all of them, and `custom…` opens W/H boxes. This is
+  what lets a real device's density be tried at a width it never ships at.
+- **dpr** — the device pixel ratio scripts inside the frame see. **Read this
+  before trusting it.**
+
+  It reaches anything that reads `window.devicePixelRatio`. On this site that
+  is the three canvases: `scene.js` sets the renderer's pixel ratio at init
+  (and the override lands first, because scene.js is imported on
+  `requestIdleCallback` after first paint), while `comet.js` and `lost.js`
+  re-read on resize — which is why the override fires a synthetic one.
+
+  It does **not** reach `srcset`. The engine picks the 1x/2x/3x variant from
+  the window's **real** ratio before any script runs, and nothing can lie to
+  it. So the dropdown is honest about canvas behaviour and powerless over
+  asset selection. Two things close that gap:
+
+  - the readout at the top right shows the ratio `srcset` is actually seeing,
+    and the **browser zoom that would produce the one you selected** — zoom
+    moves `devicePixelRatio` for real, variant choice included;
+  - each frame reports the variant every `<img>` really loaded (below).
+
+  Nothing in `style.css` branches on resolution, so no layout depends on
+  density either way.
 - **rotate** — swaps width and height on every frame. Phone landscape is where
   the collapsed nav menu gets taller than the viewport.
 - **sync scroll** — scroll one frame, all follow proportionally. This is how
@@ -45,11 +74,22 @@ queries, container queries and layout all behave. Not a resized window.
   horizontal overflow (and the element causing it), tap targets under 24px,
   headings colliding with the fixed header, a translucent header, script
   errors. Badges also sit in each frame's caption.
+- **the `img` badge** — total image weight for that viewport, and per image the
+  density variant the engine chose, the box it renders in, and its natural
+  size. An image is flagged **over-specified** when it decodes far more pixels
+  than its box needs, **under-specified** when it decodes fewer. Both are
+  judged against the **host** browser's real ratio, never against the `dpr`
+  dropdown — judging against a faked 3x would flag every image on the page and
+  mean nothing. When the two ratios differ, the drawer says so once per frame
+  and gives the zoom percentage that would make them match. Cached responses
+  report `encodedBodySize`, so the number is what a cold device would pull
+  rather than 0.
 - **edges** — the `edge-575 / 576 / 767 / 768 / 991 / 992 / 1199 / 1200`
   profiles are one pixel either side of this site's own breakpoints. Layouts
   break at a boundary far more often than in the middle of a range.
 
-Keys: `r` rotate · `s` sync · `i` insets · `a` audit · `Esc` close drawer.
+Keys: `r` rotate · `s` sync · `i` insets · `p` cycle dpr · `a` audit ·
+`Esc` close drawer.
 The toolbar state lives in the URL, so a layout you are chasing survives a
 reload and can be pasted to someone else.
 

@@ -82,6 +82,12 @@
     padding: 4px 8px;
   }
   input[type="text"] { min-width: 190px; }
+  input[type="number"] { width: 68px; font: inherit; background: var(--bg-3); color: var(--ink);
+                         border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; }
+  .times { color: var(--ink-dim); }
+  .hint { font-size: 11px; color: var(--ink-dim); white-space: nowrap; }
+  .hint b { color: var(--ink); font-weight: 600; }
+  .hint.warn { color: var(--warn); }
   button { cursor: pointer; }
   button:hover { border-color: var(--accent); color: var(--accent); }
   button.on { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
@@ -228,6 +234,26 @@
   <div class="sep"></div>
 
   <div class="grp">
+    <label for="device">device</label>
+    <select id="device" title="Show one device on its own. (wall) keeps whatever the checkbox row below has picked."></select>
+  </div>
+
+  <div class="grp">
+    <label for="size">size</label>
+    <select id="size" title="Viewport in CSS px. 'device' lets each frame use its own; anything else overrides every frame."></select>
+    <input type="number" id="sizeW" min="200" max="5000" step="1" title="custom width in CSS px" />
+    <span class="times">×</span>
+    <input type="number" id="sizeH" min="200" max="5000" step="1" title="custom height in CSS px" />
+  </div>
+
+  <div class="grp">
+    <label for="dpr">dpr</label>
+    <select id="dpr" title="Device pixel ratio seen by scripts inside the frame. JS-visible only — see the dpr readout at the right."></select>
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="grp">
     <label for="theme">theme</label>
     <select id="theme">
       <option value="dark">dark</option>
@@ -257,6 +283,8 @@
   </div>
 
   <div class="lan">
+    <span id="dprHint" class="hint"></span>
+    <span class="sep"></span>
     <span>real device →</span>
     <span id="lanUrls"></span>
   </div>
@@ -272,7 +300,7 @@
 </div>
 
 <script type="module">
-import { ALL, PATHS, PHONE_MAX } from '/devview/devices.mjs';
+import { ALL, PATHS, PHONE_MAX, DPR_STEPS } from '/devview/devices.mjs';
 
 (function () {
   'use strict';
@@ -287,6 +315,14 @@ import { ALL, PATHS, PHONE_MAX } from '/devview/devices.mjs';
     sync: false,
     insets: false,
     picked: new Set(ALL.filter((d) => d.on).map((d) => d.n)),
+    /* 'device' means every frame keeps its own value; a number overrides all
+       of them. Kept as two separate overrides rather than one 'profile' so a
+       real device's width can be paired with someone else's density — which
+       is the combination that actually catches asset bugs. */
+    size: 'device',   // 'device' | 'WxH'
+    cw: 1280,
+    ch: 800,
+    dpr: 'device',    // 'device' | number
   };
 
   /* ── URL state, so a layout you are chasing survives a reload ── */
@@ -298,6 +334,10 @@ import { ALL, PATHS, PHONE_MAX } from '/devview/devices.mjs';
     state.rotate = q.get('rotate') === '1';
     state.insets = q.get('insets') === '1';
     if (q.get('d')) state.picked = new Set(q.get('d').split(','));
+    if (q.get('size')) state.size = q.get('size');
+    if (q.get('dpr')) state.dpr = q.get('dpr') === 'device' ? 'device' : parseFloat(q.get('dpr'));
+    const m = /^(\d+)x(\d+)$/.exec(state.size || '');
+    if (m) { state.cw = +m[1]; state.ch = +m[2]; }
   }
   function writeUrl() {
     const q = new URLSearchParams({
@@ -307,6 +347,8 @@ import { ALL, PATHS, PHONE_MAX } from '/devview/devices.mjs';
       rotate: state.rotate ? '1' : '0',
       insets: state.insets ? '1' : '0',
       d: [...state.picked].join(','),
+      size: state.size,
+      dpr: String(state.dpr),
     });
     history.replaceState(null, '', '?' + q.toString());
   }
@@ -319,11 +361,76 @@ import { ALL, PATHS, PHONE_MAX } from '/devview/devices.mjs';
     pathSel.append(o);
   });
 
+  /* The device dropdown is a shortcut to the checkbox row below, not a second
+     source of truth: picking one solos it, and '(wall)' means "leave the
+     checkboxes alone". One selection model, two ways to drive it. */
+  const deviceSel = el('device');
+  {
+    const wall = document.createElement('option');
+    wall.value = ''; wall.textContent = '(wall)';
+    deviceSel.append(wall);
+    ['phone', 'tablet', 'desktop', 'edges'].forEach((g) => {
+      const og = document.createElement('optgroup');
+      og.label = g;
+      ALL.filter((d) => d.g === g).forEach((d) => {
+        const o = document.createElement('option');
+        o.value = d.n;
+        o.textContent = d.n + '  ' + d.w + '×' + d.h + '  @' + d.dpr + 'x';
+        og.append(o);
+      });
+      deviceSel.append(og);
+    });
+  }
+
+  const sizeSel = el('size');
+  {
+    const own = document.createElement('option');
+    own.value = 'device'; own.textContent = 'device';
+    sizeSel.append(own);
+    /* Every distinct viewport the table already describes, so the size list
+       and the device list can never drift apart. */
+    const seen = new Set();
+    ALL.forEach((d) => {
+      const k = d.w + 'x' + d.h;
+      if (seen.has(k)) return;
+      seen.add(k);
+      const o = document.createElement('option');
+      o.value = k; o.textContent = d.w + '×' + d.h;
+      sizeSel.append(o);
+    });
+    const custom = document.createElement('option');
+    custom.value = 'custom'; custom.textContent = 'custom…';
+    sizeSel.append(custom);
+  }
+
+  const dprSel = el('dpr');
+  {
+    const own = document.createElement('option');
+    own.value = 'device'; own.textContent = 'device';
+    dprSel.append(own);
+    DPR_STEPS.forEach((v) => {
+      const o = document.createElement('option');
+      o.value = String(v); o.textContent = v + 'x';
+      dprSel.append(o);
+    });
+  }
+
   function syncToolbar() {
     pathSel.value = PATHS.includes(state.path) ? state.path : '';
     el('pathCustom').value = PATHS.includes(state.path) ? '' : state.path;
     el('theme').value = state.theme;
     el('zoom').value = String(state.zoom);
+    const solo = [...state.picked];
+    deviceSel.value = solo.length === 1 && ALL.some((d) => d.n === solo[0]) ? solo[0] : '';
+    sizeSel.value = state.size === 'device' ? 'device'
+      : (Array.from(sizeSel.options).some((o) => o.value === state.size) ? state.size : 'custom');
+    const custom = sizeSel.value === 'custom';
+    el('sizeW').style.display = custom ? '' : 'none';
+    el('sizeH').style.display = custom ? '' : 'none';
+    el('sizeW').nextElementSibling.style.display = custom ? '' : 'none';
+    el('sizeW').value = state.cw;
+    el('sizeH').value = state.ch;
+    dprSel.value = String(state.dpr);
     el('rotate').classList.toggle('on', state.rotate);
     el('sync').classList.toggle('on', state.sync);
     el('insets').classList.toggle('on', state.insets);
@@ -335,6 +442,31 @@ import { ALL, PATHS, PHONE_MAX } from '/devview/devices.mjs';
     if (v) { state.path = v.startsWith('/') ? v : '/' + v; render(); }
   });
   el('theme').addEventListener('change', (e) => { state.theme = e.target.value; render(); });
+
+  deviceSel.addEventListener('change', () => {
+    if (!deviceSel.value) return;              // '(wall)' leaves the picker alone
+    state.picked = new Set([deviceSel.value]);
+    buildPicker(); render();
+  });
+  sizeSel.addEventListener('change', () => {
+    if (sizeSel.value === 'custom') { state.size = state.cw + 'x' + state.ch; }
+    else { state.size = sizeSel.value; }
+    render();
+  });
+  const onCustomSize = () => {
+    state.cw = Math.max(200, Math.min(5000, parseInt(el('sizeW').value, 10) || state.cw));
+    state.ch = Math.max(200, Math.min(5000, parseInt(el('sizeH').value, 10) || state.ch));
+    state.size = state.cw + 'x' + state.ch;
+    render();
+  };
+  el('sizeW').addEventListener('change', onCustomSize);
+  el('sizeH').addEventListener('change', onCustomSize);
+  dprSel.addEventListener('change', (e) => {
+    state.dpr = e.target.value === 'device' ? 'device' : parseFloat(e.target.value);
+    /* A frame reads devicePixelRatio while it boots, so the override has to be
+       in place before the scripts run — which means a reload, not a repaint. */
+    render();
+  });
   el('zoom').addEventListener('change', (e) => {
     state.zoom = e.target.value === 'fit' ? 'fit' : parseFloat(e.target.value);
     layout();
@@ -418,13 +550,20 @@ import { ALL, PATHS, PHONE_MAX } from '/devview/devices.mjs';
       e.id = 'empty';
       e.innerHTML = 'No frames selected.<br />Pick a device above, or hit an <kbd>all</kbd> button.';
       stage.append(e);
-      syncToolbar(); writeUrl(); lanHint();
+      syncToolbar(); writeUrl(); lanHint(); dprHint();
       return;
     }
 
     picked.forEach((d) => {
-      const w = state.rotate ? d.h : d.w;
-      const h = state.rotate ? d.w : d.h;
+      /* The size override wins over the profile's own viewport, so a real
+         device's density can be tried at a width it never ships at. Rotation
+         applies after, to whichever pair is in force. */
+      const om = /^(\d+)x(\d+)$/.exec(state.size);
+      const bw = om ? +om[1] : d.w;
+      const bh = om ? +om[2] : d.h;
+      const w = state.rotate ? bh : bw;
+      const h = state.rotate ? bw : bh;
+      const dpr = state.dpr === 'device' ? (d.dpr || 1) : state.dpr;
 
       const wrap = document.createElement('div');
       wrap.className = 'frame';
@@ -434,7 +573,11 @@ import { ALL, PATHS, PHONE_MAX } from '/devview/devices.mjs';
       const name = document.createElement('b');
       name.textContent = d.n;
       const dims = document.createElement('span');
-      dims.textContent = w + '×' + h;
+      dims.textContent = w + '×' + h + ' @' + dpr + 'x';
+      dims.title = 'physical ' + Math.round(w * dpr) + '×' + Math.round(h * dpr) + ' px'
+        + (om ? ' — width overridden, profile is ' + d.w + '×' + d.h : '')
+        + (state.dpr !== 'device' && d.dpr && d.dpr !== dpr
+           ? ' — dpr overridden, profile is ' + d.dpr + 'x' : '');
       const badges = document.createElement('span');
       badges.className = 'badges';
       const spacer = document.createElement('span');
@@ -462,16 +605,17 @@ import { ALL, PATHS, PHONE_MAX } from '/devview/devices.mjs';
       wrap.append(cap, shell);
       stage.append(wrap);
 
-      const rec = { dev: d, w, h, wrap, shell, iframe, badges };
+      const rec = { dev: d, w, h, dpr, override: !!om, wrap, shell, iframe, badges };
       frames.push(rec);
 
-      iframe.addEventListener('load', () => { applyTheme(rec); hookErrors(rec); auditFrame(rec); });
+      iframe.addEventListener('load', () => { applyDpr(rec); applyTheme(rec); hookErrors(rec); auditFrame(rec); });
     });
 
     layout();
     syncToolbar();
     writeUrl();
     lanHint();
+    dprHint();
   }
 
   /* Scale each frame down so many fit on screen. The iframe keeps its real
@@ -490,6 +634,55 @@ import { ALL, PATHS, PHONE_MAX } from '/devview/devices.mjs';
   }
   window.addEventListener('resize', layout);
   el('zoom').addEventListener('change', layout);
+
+  /* ── Device-pixel-ratio override ──────────────────────────────────────
+     What this DOES reach: every script that reads window.devicePixelRatio.
+     On this site that is the three canvases — scene.js sets the renderer's
+     pixel ratio once at init, and comet.js / lost.js re-read it on resize,
+     hence the synthetic resize below. Because scene.js is imported on
+     requestIdleCallback (after first paint), an override installed on `load`
+     lands before it boots.
+
+     What it does NOT reach: srcset. The engine picks the 1x/2x/3x variant
+     from the window's REAL ratio, before any of this runs, and there is no
+     way to lie to it from script. So the dpr dropdown is honest about canvas
+     behaviour and useless for asset selection — which is why the frames also
+     report the variant each <img> actually loaded, and why the readout at the
+     top right tells you the browser zoom that produces a given real ratio.
+     For asset work at a fixed ratio, use that zoom, or the headless run. */
+  function applyDpr(f) {
+    let win;
+    try { win = f.iframe.contentWindow; } catch (e) { return; }
+    if (!win) return;
+    try {
+      if (win.__devviewDpr === f.dpr) return;
+      win.__devviewDpr = f.dpr;
+      Object.defineProperty(win, 'devicePixelRatio', {
+        configurable: true,
+        get: () => f.dpr,
+      });
+      win.dispatchEvent(new win.Event('resize'));
+    } catch (e) { f.dprFailed = true; }
+  }
+
+  /* What real ratio the host browser is handing the frames, and the zoom that
+     would make it match the selected one. devicePixelRatio moves with browser
+     zoom, so this is a live reading, not a guess about the panel. */
+  function dprHint() {
+    const box = el('dprHint');
+    const host = window.devicePixelRatio || 1;
+    const want = state.dpr === 'device' ? null : state.dpr;
+    box.classList.remove('warn');
+    box.replaceChildren();
+    const b = document.createElement('b');
+    b.textContent = Math.round(host * 100) / 100 + 'x';
+    box.append(document.createTextNode('srcset sees '), b);
+    if (want && Math.abs(want - host) > 0.01) {
+      box.classList.add('warn');
+      box.append(document.createTextNode(' · zoom to '
+        + Math.round((want / host) * 100) + '% for a real ' + want + 'x'));
+    }
+  }
 
   /* ── Theme forcing (needs same-origin, which is why we are served) ── */
   function applyTheme(f) {
@@ -599,7 +792,82 @@ import { ALL, PATHS, PHONE_MAX } from '/devview/devices.mjs';
       navOpaque = parts.length < 4 || parts[3] >= 0.999;
     }
 
+    /* Which density variant each <img> really loaded, and what the images
+       cost on this viewport. currentSrc is the engine's own answer, so it is
+       the one measurement here the dpr override cannot distort. Bytes come
+       from Resource Timing -- same-origin, so transferSize is populated; 0
+       means it came from cache, which is worth reading as 'cached' rather
+       than as 'free'. */
+    const imgs = [];
+    let imgBytes = 0;
+    const byUrl = new Map();
+    try {
+      win.performance.getEntriesByType('resource').forEach((r) => {
+        if (r.initiatorType === 'img' || /\.(webp|avif|png|jpe?g|svg)(\?|$)/i.test(r.name)) {
+          byUrl.set(r.name, r);
+        }
+      });
+    } catch (e) { /* Resource Timing unavailable; the variant list still works */ }
+    doc.querySelectorAll('img').forEach((im) => {
+      const cur = im.currentSrc || im.src;
+      if (!cur) return;
+      let density = '';
+      const set = im.getAttribute('srcset');
+      if (set) {
+        const hit = set.split(',').map((x) => x.trim())
+          .find((x) => cur.endsWith(x.split(/\s+/)[0]));
+        density = hit ? (hit.split(/\s+/)[1] || '') : '';
+      }
+      const r = byUrl.get(cur);
+      /* Dev serves every <Image> through /_image?href=<encoded>&w=&f=, so the
+         raw URL is a wall of percent-escapes. Production is content-hashed
+         filenames and needs no unwrapping — hence the fallback. */
+      let label;
+      try {
+        const u = new URL(cur, location.href);
+        const href = u.searchParams.get('href');
+        if (href) {
+          label = decodeURIComponent(href).split('?')[0].split('/').pop()
+            + ' w' + (u.searchParams.get('w') || '?')
+            + '.' + (u.searchParams.get('f') || '?');
+        }
+      } catch (e) { /* fall through to the basename */ }
+      /* transferSize is 0 for a cache hit, which is not the same as free:
+         encodedBodySize still carries what the device would have to pull on a
+         cold load, and that is the number worth optimising against. */
+      const bytes = r ? (r.transferSize || r.encodedBodySize || 0) : undefined;
+      if (bytes) imgBytes += bytes;
+      const box = im.getBoundingClientRect();
+      imgs.push({
+        name: label || cur.split('/').pop(),
+        density: density || '(no srcset)',
+        bytes,
+        boxW: Math.round(box.width),
+        box: Math.round(box.width) + '×' + Math.round(box.height),
+        natW: im.naturalWidth,
+        natural: im.naturalWidth + '×' + im.naturalHeight,
+      });
+    });
+
+    /* An image whose decoded pixels far exceed what its box needs is wasted
+       bytes; the reverse is a blurry one. The 1.35 / 0.9 band leaves room for
+       the fractional ratios without crying wolf on every frame.
+
+       Judged against the ratio the ENGINE actually used -- the host window's
+       real one -- not against the dpr dropdown. srcset selection cannot
+       follow the override, so judging against a faked 3x would report every
+       image on the page as under-specified and mean nothing. The gap between
+       the two ratios is reported once per frame instead, below. */
+    const realDpr = window.devicePixelRatio || 1;
+    const overspec = imgs.filter((i) => i.boxW > 0 && i.natW > i.boxW * realDpr * 1.35);
+    const underspec = imgs.filter((i) => i.boxW > 0 && i.natW < i.boxW * realDpr * 0.9);
+
     f.report = {
+      imgs,
+      imgBytes,
+      realDpr,
+      overspec,
+      underspec,
       overflow: Math.max(0, doc.documentElement.scrollWidth - vw),
       wide: [...new Set(wide)].slice(0, 6),
       small: [...new Set(small)].slice(0, 8),
@@ -627,7 +895,15 @@ import { ALL, PATHS, PHONE_MAX } from '/devview/devices.mjs';
     if (r.underNav > 0) add('under nav ' + r.underNav + 'px', 'warn');
     if (r.navOpaque === false) add('nav translucent', 'warn', r.navBg);
     if (f.errors && f.errors.length) add('js ' + f.errors.length, 'bad', f.errors.join('\n'));
-    if (!r.overflow && !r.small.length && !r.underNav && r.navOpaque !== false && !(f.errors || []).length) {
+    if (r.imgs && r.imgs.length) {
+      add('img ' + (r.imgBytes ? Math.round(r.imgBytes / 1024) + ' KB' : r.imgs.length + ' cached'),
+        r.overspec.length ? 'warn' : '',
+        r.imgs.map((i) => i.density + '  ' + i.name + '  box ' + i.box + '  natural ' + i.natural
+          + (i.bytes ? '  ' + Math.round(i.bytes / 1024) + ' KB' : '  cached')).join('\n'));
+    }
+    if (f.dprFailed) add('dpr not applied', 'bad', 'devicePixelRatio could not be overridden in this frame');
+    if (!r.overflow && !r.small.length && !r.underNav && r.navOpaque !== false
+        && !(f.errors || []).length && !(r.overspec || []).length && !(r.underspec || []).length) {
       add('clean', 'ok');
     }
   }
@@ -644,10 +920,23 @@ import { ALL, PATHS, PHONE_MAX } from '/devview/devices.mjs';
       if (r.small.length) lines.push([f.dev.n, 'tap target under 24px — ' + r.small.join(' ; ')]);
       if (r.underNav) lines.push([f.dev.n, 'first heading sits ' + r.underNav + 'px under the fixed header']);
       if (r.navOpaque === false) lines.push([f.dev.n, 'header background is translucent (' + r.navBg + ')']);
+      if (r.realDpr && Math.abs(f.dpr - r.realDpr) > 0.01) {
+        lines.push([f.dev.n, 'dpr ' + f.dpr + 'x is script-visible only in this frame'
+          + ' (canvases see it; srcset does not). The engine picked variants for the'
+          + ' host ratio, ' + r.realDpr + 'x, and the image findings below are judged'
+          + ' against that. For real ' + f.dpr + 'x assets, zoom the browser to '
+          + Math.round((f.dpr / r.realDpr) * 100) + '% or use the headless run.']);
+      }
+      (r.overspec || []).forEach((i) => lines.push([f.dev.n,
+        'image over-specified at ' + r.realDpr + 'x -- ' + i.name + ' decodes ' + i.natural
+        + ' for a ' + i.box + ' box (' + i.density + ')']));
+      (r.underspec || []).forEach((i) => lines.push([f.dev.n,
+        'image under-specified at ' + r.realDpr + 'x -- ' + i.name + ' decodes ' + i.natural
+        + ' for a ' + i.box + ' box (' + i.density + ')']));
       (f.errors || []).forEach((e) => lines.push([f.dev.n, 'script: ' + e]));
     });
     el('drawerTitle').textContent = 'findings — ' + state.path + ' · ' + state.theme
-      + ' · ' + frames.length + ' frame' + (frames.length === 1 ? '' : 's');
+      + ' · dpr ' + state.dpr + ' · ' + frames.length + ' frame' + (frames.length === 1 ? '' : 's');
     if (!lines.length) {
       const d = document.createElement('div');
       d.className = 'none';
@@ -712,6 +1001,14 @@ import { ALL, PATHS, PHONE_MAX } from '/devview/devices.mjs';
     if (e.key === 's') { state.sync = !state.sync; syncToolbar(); }
     if (e.key === 'a') auditAll();
     if (e.key === 'i') { state.insets = !state.insets; render(); }
+    if (e.key === 'p') {
+      /* Cycle the density: device, then each step. The frames reload, because
+         the override has to be in place before their scripts read it. */
+      const seq = ['device'].concat(DPR_STEPS);
+      const i = seq.findIndex((v) => String(v) === String(state.dpr));
+      state.dpr = seq[(i + 1) % seq.length];
+      render();
+    }
     if (e.key === 'Escape') el('drawer').classList.remove('open');
   });
 
