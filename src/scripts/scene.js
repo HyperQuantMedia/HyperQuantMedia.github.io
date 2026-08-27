@@ -1,19 +1,46 @@
 /* Three.js starfield + constellation scene — HyperQuant Media
-   Deep-void stars drift slowly; nearby stars wire into faint
-   constellations; a bright Polaris core anchors the field; the odd
-   meteor crosses it.
+ *
+ * Moved out of public/js/ and into the Astro build so `three` can be
+ * tree-shaken: the prebuilt UMD bundle was 636 KB raw / 161 KB gzipped on every
+ * page — 45% of the site's transfer — and this scene touches 15 of its symbols.
+ * Importing them by name lets Vite drop the rest.
+ *
+ * It is also no longer in the document. Base.astro dynamically imports this
+ * module on requestIdleCallback, after first paint, so none of it sits on the
+ * critical path. That costs nothing visually: #siteCanvas starts at opacity 0
+ * and fades in over 1.2s once this adds `.live`, and body::before paints a
+ * static CSS star wash underneath until then.
+ *
+ * Imported for its side effects — the module builds the scene on evaluation.
+ * The browser's module cache means a second import is a no-op, which is what
+ * keeps the persisted canvas from getting a second render loop across
+ * client-side navigations.
+ *
+ * Symbols used: AdditiveBlending, BufferAttribute, BufferGeometry, CanvasTexture, Color, LineBasicMaterial, LineSegments, NormalBlending, PerspectiveCamera, Points, PointsMaterial, Scene, Sprite, SpriteMaterial, WebGLRenderer
+ */
+import {
+  AdditiveBlending,
+  BufferAttribute,
+  BufferGeometry,
+  CanvasTexture,
+  Color,
+  LineBasicMaterial,
+  LineSegments,
+  NormalBlending,
+  PerspectiveCamera,
+  Points,
+  PointsMaterial,
+  Scene,
+  Sprite,
+  SpriteMaterial,
+  WebGLRenderer,
+} from 'three';
 
-   The canvas is marked transition:persist in the layout, so this scene is
-   created once and survives client-side navigation. Navigating "warps" the
-   camera — a brief field-of-view surge and push into the field — so moving
-   between pages reads as travel through the same space rather than a reload.
-   The launcher this site orbits is called Warpgate; the site behaves like
-   its namesake. */
 (function () {
   'use strict';
 
   const canvas = document.getElementById('siteCanvas');
-  if (!canvas || typeof THREE === 'undefined') return;
+  if (!canvas) return;
 
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const isMobile = window.innerWidth < 768;
@@ -32,13 +59,13 @@
   const BASE_FOV   = 55;
 
   /* Renderer */
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: !isMobile, alpha: true });
+  const renderer = new WebGLRenderer({ canvas, antialias: !isMobile, alpha: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setClearColor(0x000000, 0);
   renderer.setSize(window.innerWidth, window.innerHeight);
 
-  const scene  = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(BASE_FOV, window.innerWidth / window.innerHeight, 0.1, 2400);
+  const scene  = new Scene();
+  const camera = new PerspectiveCamera(BASE_FOV, window.innerWidth / window.innerHeight, 0.1, 2400);
   camera.position.z = 560;
 
   /* An untextured PointsMaterial draws each point as a hard square, which is
@@ -55,7 +82,7 @@
     grad.addColorStop(1, 'rgba(255,255,255,0)');
     g.fillStyle = grad;
     g.fillRect(0, 0, 64, 64);
-    return new THREE.CanvasTexture(c);
+    return new CanvasTexture(c);
   })();
 
   /* A four-point glint for the handful of bright "hero" stars. */
@@ -81,7 +108,7 @@
       g.fillRect(-62, -1.6, 124, 3.2);
       g.restore();
     }
-    return new THREE.CanvasTexture(c);
+    return new CanvasTexture(c);
   })();
 
   /* A soft irregular cloud: several offset radial gradients on one canvas.
@@ -100,7 +127,7 @@
       g.fillStyle = grad;
       g.fillRect(0, 0, 256, 256);
     }
-    return new THREE.CanvasTexture(c);
+    return new CanvasTexture(c);
   })();
 
   /* Star positions, velocities, sizes */
@@ -123,7 +150,7 @@
       // Lines fade by mixing toward the ground; black is the dark-mode ground,
       // which makes the mix identical to a plain alpha multiply.
       ground: 0x000000,
-      blending: THREE.AdditiveBlending,
+      blending: AdditiveBlending,
       starOpacity: 0.9,
       lineOpacity: 0.4,
       rose: 0xf472b6,
@@ -138,7 +165,7 @@
       polaris: 0x6d4700,
       polarisScale: 0.6,
       ground: 0xf6f7fb,
-      blending: THREE.NormalBlending,
+      blending: NormalBlending,
       starOpacity: 0.75,
       lineOpacity: 0.5,
       rose: 0xb02a72,
@@ -156,8 +183,8 @@
   }
 
   let theme = THEMES[currentTheme()];
-  const palette = theme.stars.map((h) => new THREE.Color(h));
-  const groundCol = new THREE.Color(theme.ground);
+  const palette = theme.stars.map((h) => new Color(h));
+  const groundCol = new Color(theme.ground);
 
   for (let i = 0; i < STAR_COUNT; i++) {
     const i3 = i * 3;
@@ -174,11 +201,11 @@
     colArr[i3] = c.r; colArr[i3 + 1] = c.g; colArr[i3 + 2] = c.b;
   }
 
-  const starsGeo = new THREE.BufferGeometry();
-  starsGeo.setAttribute('position', new THREE.BufferAttribute(posArr, 3));
-  starsGeo.setAttribute('color',    new THREE.BufferAttribute(colArr, 3));
+  const starsGeo = new BufferGeometry();
+  starsGeo.setAttribute('position', new BufferAttribute(posArr, 3));
+  starsGeo.setAttribute('color',    new BufferAttribute(colArr, 3));
 
-  const starsMat = new THREE.PointsMaterial({
+  const starsMat = new PointsMaterial({
     size: isMobile ? 2.6 : 3.2,
     map: starSprite,
     transparent: true,
@@ -187,31 +214,31 @@
     sizeAttenuation: true,
     depthWrite: false,
   });
-  scene.add(new THREE.Points(starsGeo, starsMat));
+  scene.add(new Points(starsGeo, starsMat));
 
   /* Polaris — the bright anchor star */
-  const polarisGeo = new THREE.BufferGeometry();
-  polarisGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array([0, 40, 60]), 3));
+  const polarisGeo = new BufferGeometry();
+  polarisGeo.setAttribute('position', new BufferAttribute(new Float32Array([0, 40, 60]), 3));
   const POLARIS_SIZE = isMobile ? 10 : 14;
-  const polarisMat = new THREE.PointsMaterial({
+  const polarisMat = new PointsMaterial({
     color: theme.polaris, size: POLARIS_SIZE * (theme.polarisScale || 1), map: starSprite,
     transparent: true, opacity: 1,
     sizeAttenuation: true, blending: theme.blending, depthWrite: false,
   });
-  const polaris = new THREE.Points(polarisGeo, polarisMat);
+  const polaris = new Points(polarisGeo, polarisMat);
   scene.add(polaris);
 
   /* Constellation links */
   const linesPosArr = new Float32Array(MAX_LINES * 6);
   const linesColArr = new Float32Array(MAX_LINES * 6);
-  const linesGeo = new THREE.BufferGeometry();
-  linesGeo.setAttribute('position', new THREE.BufferAttribute(linesPosArr, 3));
-  linesGeo.setAttribute('color',    new THREE.BufferAttribute(linesColArr, 3));
-  const linesMat = new THREE.LineBasicMaterial({
+  const linesGeo = new BufferGeometry();
+  linesGeo.setAttribute('position', new BufferAttribute(linesPosArr, 3));
+  linesGeo.setAttribute('color',    new BufferAttribute(linesColArr, 3));
+  const linesMat = new LineBasicMaterial({
     vertexColors: true, transparent: true, opacity: theme.lineOpacity,
     blending: theme.blending, depthWrite: false,
   });
-  scene.add(new THREE.LineSegments(linesGeo, linesMat));
+  scene.add(new LineSegments(linesGeo, linesMat));
 
   /* Meteors — the occasional shooting star. A pool of three line segments;
      LineBasicMaterial has no per-vertex alpha, so fading is done the same
@@ -223,14 +250,14 @@
   for (let i = 0; i < METEOR_MAX; i++) meteors.push({ active: false });
   const metPosArr = new Float32Array(METEOR_MAX * 6);
   const metColArr = new Float32Array(METEOR_MAX * 6);
-  const metGeo = new THREE.BufferGeometry();
-  metGeo.setAttribute('position', new THREE.BufferAttribute(metPosArr, 3));
-  metGeo.setAttribute('color',    new THREE.BufferAttribute(metColArr, 3));
-  const metMat = new THREE.LineBasicMaterial({
+  const metGeo = new BufferGeometry();
+  metGeo.setAttribute('position', new BufferAttribute(metPosArr, 3));
+  metGeo.setAttribute('color',    new BufferAttribute(metColArr, 3));
+  const metMat = new LineBasicMaterial({
     vertexColors: true, transparent: true, opacity: 0.9,
     blending: theme.blending, depthWrite: false,
   });
-  scene.add(new THREE.LineSegments(metGeo, metMat));
+  scene.add(new LineSegments(metGeo, metMat));
   let nextMeteor = 4 + Math.random() * 8; // seconds, in scene time
 
   /* Nebula clouds: a few large tinted sprites far behind the stars. Far
@@ -244,7 +271,7 @@
     { accent: 3, x: -280, y: -220, z: -150, scale: 460 },  // rose, low left
   ];
   const nebSprites = NEB_DEFS.map((def) => {
-    const mat = new THREE.SpriteMaterial({
+    const mat = new SpriteMaterial({
       map: nebulaTex,
       transparent: true,
       opacity: theme.nebulaOpacity,
@@ -252,7 +279,7 @@
       depthWrite: false,
       rotation: Math.random() * Math.PI * 2,
     });
-    const sp = new THREE.Sprite(mat);
+    const sp = new Sprite(mat);
     sp.position.set(def.x, def.y, def.z);
     sp.scale.set(def.scale, def.scale, 1);
     sp.userData = def;
@@ -272,14 +299,14 @@
     brightPos[i * 3]     = (Math.random() - 0.5) * SPREAD_XY * 1.3;
     brightPos[i * 3 + 1] = (Math.random() - 0.5) * SPREAD_XY * 1.3;
     brightPos[i * 3 + 2] = (Math.random() - 0.5) * SPREAD_Z * 0.8;
-    brightBase.push(new THREE.Color());
+    brightBase.push(new Color());
     brightPhase.push(Math.random() * Math.PI * 2);
     brightSpeed.push(0.5 + Math.random() * 0.9);
   }
-  const brightGeo = new THREE.BufferGeometry();
-  brightGeo.setAttribute('position', new THREE.BufferAttribute(brightPos, 3));
-  brightGeo.setAttribute('color',    new THREE.BufferAttribute(brightColArr, 3));
-  const brightMat = new THREE.PointsMaterial({
+  const brightGeo = new BufferGeometry();
+  brightGeo.setAttribute('position', new BufferAttribute(brightPos, 3));
+  brightGeo.setAttribute('color',    new BufferAttribute(brightColArr, 3));
+  const brightMat = new PointsMaterial({
     size: isMobile ? 14 : 20,
     map: flareSprite,
     transparent: true,
@@ -289,7 +316,7 @@
     blending: theme.blending,
     depthWrite: false,
   });
-  scene.add(new THREE.Points(brightGeo, brightMat));
+  scene.add(new Points(brightGeo, brightMat));
 
   function assignBrightColors() {
     // Mostly star-white with the accents sprinkled in.
@@ -298,7 +325,7 @@
   }
 
   function tintNebulae() {
-    const roseCol = new THREE.Color(theme.rose);
+    const roseCol = new Color(theme.rose);
     nebSprites.forEach((sp) => {
       const a = sp.userData.accent;
       sp.material.color.copy(a === 0 ? cGold : a === 1 ? cCyan : a === 2 ? cViolet : roseCol);
@@ -320,9 +347,9 @@
     m.maxLife = 55 + Math.random() * 35; // frames
   }
 
-  const cGold   = new THREE.Color(theme.accents[0]);
-  const cCyan   = new THREE.Color(theme.accents[1]);
-  const cViolet = new THREE.Color(theme.accents[2]);
+  const cGold   = new Color(theme.accents[0]);
+  const cCyan   = new Color(theme.accents[1]);
+  const cViolet = new Color(theme.accents[2]);
 
   /* Recolour in place when the reader switches theme. Cheaper and less
      jarring than tearing the scene down and rebuilding it. */

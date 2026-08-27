@@ -39,6 +39,100 @@
     if (!ticking) { requestAnimationFrame(onScroll); ticking = true; }
   }, { passive: true });
 
+  /* ── Navbar collapse ─────────────────────────────────────────
+     This was Bootstrap's Collapse plugin, which cost 23.7 KB gzipped on every
+     page to drive one control. It is a class swap plus a height transition, so
+     it lives here instead. The CSS is unchanged: the custom Bootstrap build
+     still ships .collapse / .collapsing / .show, and this drives exactly those.
+
+     Delegated from document so it survives every client-side page swap without
+     rebinding, and written against whatever #id the toggler names rather than
+     assuming the navbar's.
+
+     One deliberate difference from Bootstrap: Escape closes the menu. A
+     full-width opaque panel over the page wants a keyboard way out. */
+  const COLLAPSE_MS = 350;   // must match .collapsing's transition in the CSS
+
+  function reduceMotion() {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+
+  /* The open height is capped by the CSS (70svh below lg) so the panel can
+     never run off a phone in landscape. Animating to the full scrollHeight
+     would overshoot that cap and snap back, so clamp to whichever is smaller. */
+  function openHeight(el) {
+    const cap = parseFloat(getComputedStyle(el).maxHeight);
+    const want = el.scrollHeight;
+    return Number.isFinite(cap) ? Math.min(want, cap) : want;
+  }
+
+  function setExpanded(target, open) {
+    document
+      .querySelectorAll(`[data-nav-toggle="#${target.id}"]`)
+      .forEach((btn) => btn.setAttribute('aria-expanded', open ? 'true' : 'false'));
+  }
+
+  function openCollapse(el) {
+    if (el.dataset.animating || el.classList.contains('show')) return;
+    setExpanded(el, true);
+    if (reduceMotion()) { el.classList.add('show'); return; }
+    el.dataset.animating = '1';
+    el.classList.add('collapsing');
+    el.style.height = '0px';
+    void el.offsetHeight;                 // commit the start value before changing it
+    el.style.height = openHeight(el) + 'px';
+    setTimeout(() => {
+      el.classList.remove('collapsing');
+      el.classList.add('show');
+      el.style.height = '';
+      delete el.dataset.animating;
+    }, COLLAPSE_MS);
+  }
+
+  function closeCollapse(el) {
+    if (el.dataset.animating || !el.classList.contains('show')) return;
+    setExpanded(el, false);
+    if (reduceMotion()) { el.classList.remove('show'); return; }
+    el.dataset.animating = '1';
+    el.style.height = el.getBoundingClientRect().height + 'px';
+    void el.offsetHeight;
+    el.classList.add('collapsing');
+    el.classList.remove('show');
+    el.style.height = '0px';
+    setTimeout(() => {
+      el.classList.remove('collapsing');
+      el.style.height = '';
+      delete el.dataset.animating;
+    }, COLLAPSE_MS);
+  }
+
+  /* Exposed on the module scope so the anchor handler further down can close
+     the menu without re-querying the toggler. */
+  function collapseTargetOf(btn) {
+    return document.querySelector(btn.dataset.navToggle);
+  }
+
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest?.('[data-nav-toggle]');
+    if (!btn) return;
+    const target = collapseTargetOf(btn);
+    if (!target) return;
+    e.preventDefault();
+    if (target.classList.contains('show')) closeCollapse(target);
+    else openCollapse(target);
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    document.querySelectorAll('[data-nav-toggle]').forEach((btn) => {
+      const target = collapseTargetOf(btn);
+      if (target && target.classList.contains('show')) {
+        closeCollapse(target);
+        btn.focus();
+      }
+    });
+  });
+
   /* Pointer spotlight on cards: one delegated listener sets the pointer's
      position as CSS custom properties on whichever card it is over; the
      stylesheet draws the glow. Bound only on devices that actually hover. */
@@ -241,9 +335,7 @@
 
         /* Close mobile nav if open */
         const collapse = document.getElementById('navbarNav');
-        if (collapse && collapse.classList.contains('show')) {
-          bootstrap.Collapse.getInstance(collapse)?.hide();
-        }
+        if (collapse) closeCollapse(collapse);
 
         target.scrollIntoView({ behavior: 'smooth', block: 'start' });
       });

@@ -10,7 +10,10 @@
     "preview": "astro preview --host",
     "check": "astro check",
     "devview": "astro dev --host --open /devview",
-    "audit": "node tools/responsive-audit.mjs"
+    "audit": "node tools/responsive-audit.mjs",
+    "vendor:fonts": "node tools/vendor-fonts.mjs",
+    "vendor": "npm run vendor:fonts && npm run vendor:bootstrap",
+    "vendor:bootstrap": "node tools/vendor-bootstrap.mjs"
   },
   "repository": {
     "type": "git",
@@ -22,12 +25,15 @@
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.3",
-    "astro": "^7.2.4"
+    "astro": "^7.2.4",
+    "three": "0.158.0"
   },
   "allowScripts": {
     "esbuild@0.28.2": true
   },
   "devDependencies": {
-    "playwright": "1.62.1"
+    "bootstrap": "5.3.3",
+    "playwright": "1.62.1",
+    "sass": "1.103.1"
   }
 }
