@@ -1727,10 +1727,44 @@ body.field-live::before { opacity: 0; }
   0%, 100% { transform: scale(0.82); opacity: 0.24; }
   50%      { transform: scale(1.18); opacity: 0.46; }
 }
-/* Each body is drawn in local coordinates and placed by a transform ATTRIBUTE
-   on its group, so the CSS transforms animating the parts inside cannot fight
-   the positioning. Ink: --accent is the body, --accent-2 its hot parts. */
-.field-object { transition: opacity var(--transition); }
+/* Each body is drawn in local coordinates and placed from here, out of the
+   per-star --x/--y the component stamps on the anchor. CSS owns the whole
+   transform rather than sharing with a transform attribute, so the phone-width
+   scale below can compose with the placement instead of replacing it.
+   transform-origin is pinned to the SVG origin so `translate() scale()` scales
+   each body about its own placed point. Ink: --accent is the body, --accent-2
+   its hot parts. */
+.field-object {
+  /* The bodies are scaled at EVERY width, not only on phones. They were drawn
+     to sit inside a 900x360 frame with room for labels, which left them reading
+     as small marks even at full desktop size where the frame is nearly 1:1
+     with CSS pixels. 1.5 is bounded by two things, both checked: the tightest
+     pair on the chart is (146,176)-(252,74), 147 units apart, and Pulsar's
+     beams reach 30 units below its centre where its own label sits.
+
+     THIS VALUE IS MIRRORED as BODY_SCALE in ConstellationField.astro, which
+     derives every label's offset from it (`ext * BODY_SCALE + LABEL_GAP`).
+     Change one and change the other, or the labels drift off their bodies.
+     The phone steps further down are safe to differ because labels are hidden
+     below 768px. */
+  transform: translate(var(--x), var(--y)) scale(1.5);
+  transform-box: view-box;
+  transform-origin: 0 0;
+  transition: opacity var(--transition);
+}
+
+/* The hit target. `fill: none` still takes the hit once pointer-events says so,
+   and it keeps the target invisible without an opacity trick.
+
+   The markup carries r=44, the value a 320px-wide phone needs to clear 24 CSS
+   px (WCAG 2.5.8) once the 900-unit frame has been squeezed into ~296px. From
+   lg up the frame is near 1:1, so the same radius becomes an 88px hover zone
+   that lights a body up from well outside it -- tighten it there. The query is
+   on width, not on `pointer`/`hover`: those report inconsistently in headless
+   and on hybrid laptops, and 26 units is still a 54px target at that width, so
+   a touch screen loses nothing by the wider rule. */
+.field-hit { fill: none; pointer-events: all; }
+@media (min-width: 992px) { .field-hit { r: 34px; } }
 
 /* Warpgate — a wormhole: rings falling inward through a lit throat. */
 .wh { transform: rotate(-16deg); transform-box: fill-box; transform-origin: center; }
@@ -2322,7 +2356,13 @@ body.field-live::before { opacity: 0; }
   .field-label { display: none; }
   .field-legend { font-size: 0.76rem; }
 
-    .tool-card { flex-direction: column; align-items: stretch; gap: 18px; padding: 24px 22px; }
+  /* Below lg the labels are hidden, so the room they were holding is free and
+     the bodies can go past the base 1.5. The binding limits here are the
+     tightest pair on the chart (147 units apart, so 1.9 leaves 46 units of
+     air) and Pulsar's beams against the bottom of the frame (30 x 1.9 = 57
+     below y=262, inside 360). */
+  .field-object { transform: translate(var(--x), var(--y)) scale(1.9); }
+  .tool-card { flex-direction: column; align-items: stretch; gap: 18px; padding: 24px 22px; }
   .tool-scene { flex: none; }
   .tool-icon { width: 52px; height: 52px; }
   .tool-blurb { font-size: 1rem; }
@@ -3143,7 +3183,12 @@ a.ci-value:hover { color: var(--star); }
 }
 
 @media (max-width: 575.98px) {
-  }
+  /* A third step for the narrowest phones, where the figure is down to about
+     0.33 CSS px per unit and even 1.9 renders a body at ~25px. 2.3 keeps
+     Afterglow's top edge at y=39 (frame starts at 0), Pulsar's beam tip at
+     y=331 (frame ends at 360), and 74 units of air in the tightest pair. */
+  .field-object { transform: translate(var(--x), var(--y)) scale(2.3); }
+}
 
 @media (max-width: 480px) {
   .title-line { font-size: clamp(2rem, 11vw, 3rem); }

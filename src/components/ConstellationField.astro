@@ -13,9 +13,18 @@ import { tools } from '../data/products.js';
 // scroll of light, Afterglow a fading nebula, Pulsar a beaming pulsar,
 // Quartermaster a crossing of tools.
 //
-// Every object is drawn in local coordinates and placed by a transform
-// ATTRIBUTE on its group, because the CSS transforms that animate the parts
-// inside would otherwise override that positioning.
+// Every object is drawn in local coordinates and placed by a CSS transform
+// built from per-star custom properties (--x/--y) rather than a transform
+// attribute. CSS owns the whole transform so a media query can add a scale on
+// top of the placement -- at phone widths a 900-unit figure lands about a
+// third of a CSS pixel per unit, and bodies drawn for a desktop read as specks
+// there. The parts animating INSIDE each body carry their own transforms on
+// descendants, which do not fight this one.
+//
+// Each body also carries an invisible hit target sized for a thumb, because
+// the drawn glyphs measured 9-24 CSS px on a phone and these are real links,
+// not decoration. It is a sibling of the body group, not a child, so the
+// phone-width scale does not inflate it further.
 //
 // The figure draws itself when it scrolls into view and then rests. Bodies
 // link down to their cards for anyone who wants that, but nothing here has to
@@ -28,15 +37,45 @@ import { tools } from '../data/products.js';
 const W = 900;
 const H = 360;
 
-const chart: Record<string, { x: number; y: number; label: 'above' | 'below' }> = {
-  compendium:    { x: 146, y: 176, label: 'below' },
-  afterglow:     { x: 252, y: 74,  label: 'above' },
-  quartermaster: { x: 300, y: 286, label: 'below' },
-  warpgate:      { x: 438, y: 178, label: 'below' },
-  astra:         { x: 612, y: 152, label: 'above' },
-  docutale:      { x: 748, y: 64,  label: 'above' },
-  pulsar:        { x: 792, y: 262, label: 'below' },
+// The base scale style.css applies to every body, mirrored here because the
+// label offsets below are derived from it. THESE TWO MUST MATCH: change
+// `.field-object`'s transform and change this. Below 768px the CSS scales the
+// bodies further, which is safe precisely because the labels are hidden there.
+const BODY_SCALE = 1.5;
+// Air between a body's edge and the nearest edge of its name, in local units.
+const LABEL_GAP = 13;
+// Cap height of .field-label (12.5px uppercase mono), so a label placed BELOW a
+// body can be positioned by its visual top rather than its baseline. An
+// approximation used for spacing only.
+const LABEL_CAP = 9;
+
+// `ext` is each body's vertical half-extent in local units, MEASURED with
+// getBBox() on the rendered group rather than eyeballed from the paths — the
+// drawn extents include stroke widths and the bloom, and they are not what the
+// path coordinates alone suggest. Re-measure if a body is redrawn.
+//
+// Pulsar is the exception at 30: its beams rotate a full turn (pulSweep), so a
+// single getBBox reading catches them mid-sweep at 25.6 while the true vertical
+// maximum is the beam length itself.
+const chart: Record<string, { x: number; y: number; label: 'above' | 'below'; ext: number }> = {
+  compendium:    { x: 146, y: 176, label: 'below', ext: 19 },
+  afterglow:     { x: 252, y: 74,  label: 'above', ext: 18 },
+  quartermaster: { x: 300, y: 286, label: 'below', ext: 16 },
+  warpgate:      { x: 438, y: 178, label: 'below', ext: 20 },
+  astra:         { x: 612, y: 152, label: 'above', ext: 16 },
+  docutale:      { x: 748, y: 64,  label: 'above', ext: 14 },
+  pulsar:        { x: 792, y: 262, label: 'below', ext: 30 },
 };
+
+/* A label sits a constant distance from its body's EDGE, not from its centre.
+   With one flat offset the gap ranged from 1.6 units on Pulsar (whose beams
+   reach 30) to 34.6 on Warpgate (whose rings reach 8) — inconsistent to look
+   at, and on Pulsar close enough to a collision that raising the body scale
+   put its beams through its own name. */
+function labelY(star: { y: number; label: 'above' | 'below'; ext: number }) {
+  const edge = star.ext * BODY_SCALE + LABEL_GAP;
+  return star.label === 'above' ? star.y - edge : star.y + edge + LABEL_CAP;
+}
 
 // The lines of the figure, as pairs of slugs: three tools gather into the
 // gate, and the chart-and-rhythm arm runs out the other side.
@@ -90,11 +129,17 @@ const sky = Array.from({ length: 46 }, (_, i) => ({
 
     {stars.map((s, i) => (
       <a class={`field-star ${s.accent}${s.accentAlt ? ` alt-${s.accentAlt}` : ''} is-${s.status}`}
-         href={`#${s.slug}`} style={`--i: ${i}`}>
+         href={`#${s.slug}`} style={`--i: ${i}; --x: ${s.x}px; --y: ${s.y}px`}>
         <title>{s.name} — {s.role}</title>
-        <circle class="field-bloom" cx={s.x} cy={s.y} r={s.status === 'horizon' ? 13 : 17} />
 
-        <g class="field-object" transform={`translate(${s.x} ${s.y})`}>
+        {/* Thumb-sized hit target. The radius is on the ATTRIBUTE, not only in
+            CSS, so a browser without the CSS `r` geometry property still gets
+            the reachable size; the stylesheet only shrinks it back down where
+            a mouse is doing the pointing. */}
+        <circle class="field-hit" cx={s.x} cy={s.y} r="44" />
+
+        <g class="field-object">
+          <circle class="field-bloom" r={s.status === 'horizon' ? 13 : 17} />
           {s.slug === 'warpgate' && (
             <g class="wh">
               <ellipse class="wh-ring" rx="20" ry="7.5" />
@@ -173,7 +218,7 @@ const sky = Array.from({ length: 46 }, (_, i) => ({
           )}
         </g>
 
-        <text class="field-label" x={s.x} y={s.label === 'above' ? s.y - 32 : s.y + 42}
+        <text class="field-label" x={s.x} y={labelY(s)}
               text-anchor="middle">{s.name}</text>
       </a>
     ))}
