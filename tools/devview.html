@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>devview — HyperQuant Media local device harness</title>
+<!--
+  Local-only device/resolution harness for this site.
+
+  It is served by a dev-only Vite middleware declared in astro.config.mjs, at
+  http://<host>:4321/devview. Two consequences worth knowing:
+
+    - It NEVER lands in dist/. The middleware is `apply: 'serve'`, so the
+      production build has no idea this file exists. Nothing here ships.
+    - It is SAME-ORIGIN with the site. That is the whole reason it can force a
+      theme, read each frame's scrollWidth, count undersized tap targets, and
+      catch script errors. Opening this file over file:// instead would make
+      every frame cross-origin and reduce it to a wall of pictures.
+
+  It is deliberately dependency-free: one file, no build step, works in
+  whatever browser you point at it — which is also how you check a real
+  engine. Chromium, Firefox and Safari each render THIS page's frames with
+  their own engine, so the harness itself is the cross-engine test.
+
+  For touch, gesture, and real-mobile-browser behaviour there is no substitute
+  for the device: start the server with --host and open the LAN URL printed in
+  the header bar on the phone itself.
+-->
+<style>
+  :root {
+    --bg: #0a0a14;
+    --bg-2: #12121f;
+    --bg-3: #1a1a2b;
+    --line: #2a2a44;
+    --ink: #e8eaf6;
+    --ink-dim: #9aa0c0;
+    --accent: #ffce6e;
+    --ok: #57e1c4;
+    --bad: #ff6b5e;
+    --warn: #ffb454;
+    --pad: 10px;
+  }
+  :root[data-theme="light"] {
+    --bg: #eef1f8; --bg-2: #ffffff; --bg-3: #e3e7f3; --line: #c6cde0;
+    --ink: #14172b; --ink-dim: #555d7a; --accent: #8a5a00;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font: 13px/1.4 ui-monospace, SFMono-Regular, "JetBrains Mono", Consolas, monospace;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── Toolbar ─────────────────────────────────────────────── */
+  header {
+    flex: none;
+    background: var(--bg-2);
+    border-bottom: 1px solid var(--line);
+    padding: 8px var(--pad);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+    align-items: center;
+    position: relative;
+    z-index: 5;
+  }
+  header .grp { display: flex; align-items: center; gap: 6px; }
+  header .grp > label { color: var(--ink-dim); text-transform: uppercase; font-size: 10px; letter-spacing: .08em; }
+  .brand { font-weight: 700; color: var(--accent); letter-spacing: .06em; margin-right: 4px; }
+  .sep { width: 1px; align-self: stretch; background: var(--line); }
+
+  select, input[type="text"], button {
+    font: inherit;
+    background: var(--bg-3);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 4px 8px;
+  }
+  input[type="text"] { min-width: 190px; }
+  button { cursor: pointer; }
+  button:hover { border-color: var(--accent); color: var(--accent); }
+  button.on { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
+  .chk { display: inline-flex; align-items: center; gap: 4px; color: var(--ink-dim); cursor: pointer; }
+  .chk input { accent-color: var(--accent); }
+
+  .lan {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--ink-dim);
+    font-size: 11px;
+  }
+  .lan code {
+    background: var(--bg-3);
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    padding: 2px 6px;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .lan code:hover { border-color: var(--accent); }
+
+  /* ── Device picker ───────────────────────────────────────── */
+  #picker {
+    flex: none;
+    background: var(--bg-2);
+    border-bottom: 1px solid var(--line);
+    padding: 6px var(--pad);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    align-items: center;
+    max-height: 30vh;
+    overflow-y: auto;
+  }
+  #picker .setgrp { color: var(--ink-dim); text-transform: uppercase; font-size: 10px; letter-spacing: .08em; margin-left: 8px; }
+  #picker .setgrp:first-child { margin-left: 0; }
+  #picker label { white-space: nowrap; }
+
+  /* ── Stage ───────────────────────────────────────────────── */
+  #stage {
+    flex: 1;
+    overflow: auto;
+    padding: var(--pad);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 18px;
+    background:
+      repeating-linear-gradient(45deg, transparent 0 12px, color-mix(in srgb, var(--line) 26%, transparent) 12px 13px);
+  }
+
+  .frame { flex: none; }
+  .frame .cap {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 0 2px 4px;
+    font-size: 11px;
+    color: var(--ink-dim);
+  }
+  .frame .cap b { color: var(--ink); font-weight: 600; }
+  .frame .cap .badge {
+    border-radius: 4px;
+    padding: 1px 5px;
+    border: 1px solid var(--line);
+    background: var(--bg-2);
+  }
+  .badge.bad  { color: var(--bad);  border-color: color-mix(in srgb, var(--bad) 55%, var(--line)); }
+  .badge.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 55%, var(--line)); }
+  .badge.ok   { color: var(--ok); }
+  .frame .cap .spacer { margin-left: auto; }
+  .frame .cap a, .frame .cap button {
+    font-size: 10px; padding: 1px 6px; border-radius: 4px; text-decoration: none;
+    color: var(--ink-dim); background: var(--bg-2); border: 1px solid var(--line);
+  }
+  .frame .cap a:hover, .frame .cap button:hover { color: var(--accent); border-color: var(--accent); }
+
+  .shell {
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+  }
+  .shell.notch::before {
+    /* Stand-in for the phone status bar / safe-area inset, so a header that
+       would tuck under it is visible as a problem here too. */
+    content: "";
+    position: absolute; top: 0; left: 0; right: 0;
+    height: var(--inset, 0px);
+    background: color-mix(in srgb, var(--bad) 22%, transparent);
+    border-bottom: 1px dashed color-mix(in srgb, var(--bad) 60%, transparent);
+    pointer-events: none;
+    z-index: 2;
+  }
+  .shell iframe {
+    display: block;
+    border: 0;
+    background: var(--bg);
+    transform-origin: 0 0;
+  }
+
+  #empty {
+    margin: auto;
+    color: var(--ink-dim);
+    text-align: center;
+    max-width: 44ch;
+    line-height: 1.7;
+  }
+  #empty kbd { background: var(--bg-3); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; }
+
+  /* ── Findings drawer ─────────────────────────────────────── */
+  #drawer {
+    flex: none;
+    background: var(--bg-2);
+    border-top: 1px solid var(--line);
+    max-height: 34vh;
+    overflow: auto;
+    padding: 8px var(--pad);
+    display: none;
+  }
+  #drawer.open { display: block; }
+  #drawer h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-dim); margin: 0 0 6px; }
+  #drawer ul { margin: 0; padding-left: 18px; }
+  #drawer li { margin: 2px 0; }
+  #drawer li .who { color: var(--accent); }
+  #drawer .none { color: var(--ok); }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="brand">devview</span>
+
+  <div class="grp">
+    <label for="path">path</label>
+    <select id="path"></select>
+    <input type="text" id="pathCustom" placeholder="/or/type/a/path" />
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="grp">
+    <label for="theme">theme</label>
+    <select id="theme">
+      <option value="dark">dark</option>
+      <option value="light">light</option>
+      <option value="system">system</option>
+    </select>
+  </div>
+
+  <div class="grp">
+    <label for="zoom">zoom</label>
+    <select id="zoom">
+      <option value="fit">fit</option>
+      <option value="1">100%</option>
+      <option value="0.75">75%</option>
+      <option value="0.5" selected>50%</option>
+      <option value="0.35">35%</option>
+      <option value="0.25">25%</option>
+    </select>
+  </div>
+
+  <div class="grp">
+    <button id="rotate" title="Swap width and height on every frame">rotate</button>
+    <button id="sync" title="Scroll one frame, scroll them all (proportionally)">sync&nbsp;scroll</button>
+    <button id="insets" title="Overlay a 44px status-bar / safe-area band on phone frames">insets</button>
+    <button id="reload" title="Reload every frame">reload</button>
+    <button id="audit" title="Re-measure overflow, tap targets and script errors">audit</button>
+  </div>
+
+  <div class="lan">
+    <span>real device →</span>
+    <span id="lanUrls"></span>
+  </div>
+</header>
+
+<div id="picker"></div>
+
+<div id="stage"><div id="empty">No frames selected.<br />Pick a device above, or hit <kbd>phones</kbd>.</div></div>
+
+<div id="drawer">
+  <h2 id="drawerTitle">findings</h2>
+  <div id="drawerBody"></div>
+</div>
+
+<script type="module">
+import { ALL, PATHS, PHONE_MAX } from '/devview/devices.mjs';
+
+(function () {
+  'use strict';
+
+  const el = (id) => document.getElementById(id);
+  const stage = el('stage');
+  const state = {
+    path: '/',
+    theme: 'dark',
+    zoom: 0.5,
+    rotate: false,
+    sync: false,
+    insets: false,
+    picked: new Set(ALL.filter((d) => d.on).map((d) => d.n)),
+  };
+
+  /* ── URL state, so a layout you are chasing survives a reload ── */
+  function readUrl() {
+    const q = new URLSearchParams(location.search);
+    if (q.get('path')) state.path = q.get('path');
+    if (q.get('theme')) state.theme = q.get('theme');
+    if (q.get('zoom')) state.zoom = q.get('zoom') === 'fit' ? 'fit' : parseFloat(q.get('zoom'));
+    state.rotate = q.get('rotate') === '1';
+    state.insets = q.get('insets') === '1';
+    if (q.get('d')) state.picked = new Set(q.get('d').split(','));
+  }
+  function writeUrl() {
+    const q = new URLSearchParams({
+      path: state.path,
+      theme: state.theme,
+      zoom: String(state.zoom),
+      rotate: state.rotate ? '1' : '0',
+      insets: state.insets ? '1' : '0',
+      d: [...state.picked].join(','),
+    });
+    history.replaceState(null, '', '?' + q.toString());
+  }
+
+  /* ── Toolbar ─────────────────────────────────────────────── */
+  const pathSel = el('path');
+  PATHS.forEach((p) => {
+    const o = document.createElement('option');
+    o.value = p; o.textContent = p;
+    pathSel.append(o);
+  });
+
+  function syncToolbar() {
+    pathSel.value = PATHS.includes(state.path) ? state.path : '';
+    el('pathCustom').value = PATHS.includes(state.path) ? '' : state.path;
+    el('theme').value = state.theme;
+    el('zoom').value = String(state.zoom);
+    el('rotate').classList.toggle('on', state.rotate);
+    el('sync').classList.toggle('on', state.sync);
+    el('insets').classList.toggle('on', state.insets);
+  }
+
+  pathSel.addEventListener('change', () => { state.path = pathSel.value; el('pathCustom').value = ''; render(); });
+  el('pathCustom').addEventListener('change', (e) => {
+    const v = e.target.value.trim();
+    if (v) { state.path = v.startsWith('/') ? v : '/' + v; render(); }
+  });
+  el('theme').addEventListener('change', (e) => { state.theme = e.target.value; render(); });
+  el('zoom').addEventListener('change', (e) => {
+    state.zoom = e.target.value === 'fit' ? 'fit' : parseFloat(e.target.value);
+    layout();
+    writeUrl();
+  });
+  el('rotate').addEventListener('click', () => { state.rotate = !state.rotate; render(); });
+  el('insets').addEventListener('click', () => { state.insets = !state.insets; render(); });
+  el('sync').addEventListener('click', () => { state.sync = !state.sync; syncToolbar(); });
+  el('reload').addEventListener('click', () => render());
+  el('audit').addEventListener('click', () => auditAll());
+
+  /* ── Device picker ───────────────────────────────────────── */
+  const picker = el('picker');
+  function buildPicker() {
+    picker.replaceChildren();
+    const groups = ['phone', 'tablet', 'desktop', 'edges'];
+    groups.forEach((g) => {
+      const h = document.createElement('span');
+      h.className = 'setgrp';
+      h.textContent = g;
+      picker.append(h);
+
+      const quick = document.createElement('button');
+      quick.textContent = 'all';
+      quick.title = 'Select only this group';
+      quick.addEventListener('click', () => {
+        state.picked = new Set(ALL.filter((d) => d.g === g).map((d) => d.n));
+        buildPicker(); render();
+      });
+      picker.append(quick);
+
+      ALL.filter((d) => d.g === g).forEach((d) => {
+        const lab = document.createElement('label');
+        lab.className = 'chk';
+        lab.title = d.note || (d.w + '×' + d.h);
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = state.picked.has(d.n);
+        cb.addEventListener('change', () => {
+          if (cb.checked) state.picked.add(d.n); else state.picked.delete(d.n);
+          render();
+        });
+        lab.append(cb, document.createTextNode(d.n + ' ' + d.w));
+        picker.append(lab);
+      });
+    });
+  }
+
+  /* ── LAN URLs, for the real-device half of the job ───────── */
+  function lanHint() {
+    const box = el('lanUrls');
+    const here = location.origin;
+    const isLocal = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+    const mk = (text, title) => {
+      const c = document.createElement('code');
+      c.textContent = text;
+      c.title = title || 'click to copy';
+      c.addEventListener('click', () => navigator.clipboard?.writeText(text));
+      return c;
+    };
+    box.replaceChildren();
+    if (isLocal) {
+      const s = document.createElement('span');
+      s.textContent = 'start with --host, then open this page at the LAN address';
+      box.append(s);
+    } else {
+      box.append(mk(here + state.path, 'open this on the phone'));
+    }
+  }
+
+  /* ── Frames ──────────────────────────────────────────────── */
+  const frames = [];   // { dev, wrap, iframe, capEls }
+
+  function render() {
+    frames.length = 0;
+    stage.replaceChildren();
+    const picked = ALL.filter((d) => state.picked.has(d.n));
+
+    if (!picked.length) {
+      const e = document.createElement('div');
+      e.id = 'empty';
+      e.innerHTML = 'No frames selected.<br />Pick a device above, or hit an <kbd>all</kbd> button.';
+      stage.append(e);
+      syncToolbar(); writeUrl(); lanHint();
+      return;
+    }
+
+    picked.forEach((d) => {
+      const w = state.rotate ? d.h : d.w;
+      const h = state.rotate ? d.w : d.h;
+
+      const wrap = document.createElement('div');
+      wrap.className = 'frame';
+
+      const cap = document.createElement('div');
+      cap.className = 'cap';
+      const name = document.createElement('b');
+      name.textContent = d.n;
+      const dims = document.createElement('span');
+      dims.textContent = w + '×' + h;
+      const badges = document.createElement('span');
+      badges.className = 'badges';
+      const spacer = document.createElement('span');
+      spacer.className = 'spacer';
+      const open = document.createElement('a');
+      open.href = state.path; open.target = '_blank'; open.textContent = 'open';
+      open.title = 'Open this path in a real tab';
+      cap.append(name, dims, badges, spacer, open);
+
+      const shell = document.createElement('div');
+      shell.className = 'shell' + (state.insets && d.inset ? ' notch' : '');
+      if (state.insets && d.inset) shell.style.setProperty('--inset', d.inset + 'px');
+
+      const iframe = document.createElement('iframe');
+      iframe.width = w;
+      iframe.height = h;
+      iframe.src = state.path;
+      iframe.title = d.n + ' ' + w + '×' + h;
+      /* Astro's client-side router hijacks in-frame navigation; that is fine
+         and worth exercising, but the frame must not be able to navigate the
+         harness itself out from under us. */
+      iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-popups allow-forms');
+
+      shell.append(iframe);
+      wrap.append(cap, shell);
+      stage.append(wrap);
+
+      const rec = { dev: d, w, h, wrap, shell, iframe, badges };
+      frames.push(rec);
+
+      iframe.addEventListener('load', () => { applyTheme(rec); hookErrors(rec); auditFrame(rec); });
+    });
+
+    layout();
+    syncToolbar();
+    writeUrl();
+    lanHint();
+  }
+
+  /* Scale each frame down so many fit on screen. The iframe keeps its real
+     pixel size (so the site still believes it is that wide) and only the
+     presentation is scaled -- the whole point of a harness over a resize. */
+  function layout() {
+    const avail = stage.clientWidth - 24;
+    frames.forEach((f) => {
+      let z = state.zoom;
+      if (z === 'fit') z = Math.min(1, avail / f.w);
+      f.iframe.style.transform = 'scale(' + z + ')';
+      f.shell.style.width = Math.round(f.w * z) + 'px';
+      f.shell.style.height = Math.round(f.h * z) + 'px';
+      f.wrap.style.width = Math.round(f.w * z) + 'px';
+    });
+  }
+  window.addEventListener('resize', layout);
+  el('zoom').addEventListener('change', layout);
+
+  /* ── Theme forcing (needs same-origin, which is why we are served) ── */
+  function applyTheme(f) {
+    let doc;
+    try { doc = f.iframe.contentDocument; } catch (e) { return; }
+    if (!doc) return;
+    try {
+      const win = f.iframe.contentWindow;
+      if (state.theme === 'system') {
+        win.localStorage.removeItem('hqm-theme');
+        doc.documentElement.removeAttribute('data-theme');
+      } else {
+        win.localStorage.setItem('hqm-theme', state.theme);
+        doc.documentElement.setAttribute('data-theme', state.theme);
+      }
+    } catch (e) { /* storage blocked; the attribute above still bites */ }
+  }
+
+  /* ── Per-frame error capture ─────────────────────────────── */
+  function hookErrors(f) {
+    f.errors = f.errors || [];
+    let win;
+    try { win = f.iframe.contentWindow; } catch (e) { return; }
+    if (!win || win.__devviewHooked) return;
+    win.__devviewHooked = true;
+    win.addEventListener('error', (e) => {
+      f.errors.push((e.message || 'error') + ' @ ' + (e.filename || '?') + ':' + (e.lineno || 0));
+      paintBadges(f);
+    });
+    win.addEventListener('unhandledrejection', (e) => {
+      f.errors.push('unhandled rejection: ' + String(e.reason).slice(0, 120));
+      paintBadges(f);
+    });
+    const ce = win.console && win.console.error;
+    if (ce) {
+      win.console.error = function () {
+        f.errors.push('console.error: ' + Array.from(arguments).join(' ').slice(0, 160));
+        paintBadges(f);
+        return ce.apply(this, arguments);
+      };
+    }
+  }
+
+  /* ── The measurements that actually matter ───────────────── */
+  function auditFrame(f) {
+    let doc, win;
+    try { doc = f.iframe.contentDocument; win = f.iframe.contentWindow; } catch (e) { return; }
+    if (!doc || !doc.body) return;
+
+    const vw = win.innerWidth;
+    const label = (n) => {
+      const id = n.id ? '#' + n.id : '';
+      const cls = typeof n.className === 'string' && n.className.trim()
+        ? '.' + n.className.trim().split(/\s+/).slice(0, 2).join('.') : '';
+      return n.tagName.toLowerCase() + id + cls;
+    };
+
+    // Horizontal overflow, and who is causing it.
+    const wide = [];
+    doc.querySelectorAll('body *').forEach((n) => {
+      const r = n.getBoundingClientRect();
+      if (r.height <= 0) return;
+      if (r.right > vw + 1 || r.left < -1) wide.push(label(n) + ' [' + Math.round(r.left) + '..' + Math.round(r.right) + ']');
+    });
+
+    // Tap targets. WCAG 2.5.8 wants 24x24 CSS px; a phone-sized frame is
+    // where this bites, so only flag it there.
+    const small = [];
+    if (f.w <= PHONE_MAX) {
+      doc.querySelectorAll('a[href], button, input, select, textarea, [role="button"]').forEach((n) => {
+        const r = n.getBoundingClientRect();
+        if (!r.width || !r.height) return;
+        const p = n.parentElement;
+        // Inline links inside running prose are exempt by the criterion.
+        if (p && /^(P|LI|SPAN|EM|STRONG)$/.test(p.tagName) && p.textContent.trim() !== n.textContent.trim()) return;
+        if (r.width < 24 || r.height < 24) {
+          small.push(label(n) + ' "' + ((n.getAttribute('aria-label') || n.textContent || '').trim().slice(0, 20)) + '" '
+            + Math.round(r.width) + '×' + Math.round(r.height));
+        }
+      });
+    }
+
+    // Does anything sit under the fixed header at rest?
+    let underNav = 0;
+    const nav = doc.getElementById('mainNav');
+    if (nav) {
+      const nb = nav.getBoundingClientRect();
+      const main = doc.querySelector('main, .page-hero, .hero-section, section');
+      if (main) {
+        const mb = main.getBoundingClientRect();
+        // Only a real text collision counts; a hero deliberately runs under.
+        const firstText = main.querySelector('h1, h2, p');
+        if (firstText) {
+          const tb = firstText.getBoundingClientRect();
+          if (tb.top < nb.bottom && tb.bottom > nb.top) underNav = Math.round(nb.bottom - tb.top);
+        }
+        void mb;
+      }
+    }
+
+    // Header opacity: the thing we just changed, asserted rather than assumed.
+    let navBg = '', navOpaque = null;
+    if (nav) {
+      navBg = win.getComputedStyle(nav).backgroundColor;
+      const m = navBg.match(/rgba?\(([^)]+)\)/);
+      const parts = m ? m[1].split(',').map((s) => parseFloat(s)) : [];
+      navOpaque = parts.length < 4 || parts[3] >= 0.999;
+    }
+
+    f.report = {
+      overflow: Math.max(0, doc.documentElement.scrollWidth - vw),
+      wide: [...new Set(wide)].slice(0, 6),
+      small: [...new Set(small)].slice(0, 8),
+      underNav,
+      navBg,
+      navOpaque,
+      docHeight: doc.documentElement.scrollHeight,
+    };
+    paintBadges(f);
+  }
+
+  function paintBadges(f) {
+    const r = f.report;
+    f.badges.replaceChildren();
+    const add = (text, cls, title) => {
+      const s = document.createElement('span');
+      s.className = 'badge ' + (cls || '');
+      s.textContent = text;
+      if (title) s.title = title;
+      f.badges.append(s);
+    };
+    if (!r) return;
+    if (r.overflow > 0) add('overflow ' + r.overflow + 'px', 'bad', r.wide.join('\n'));
+    if (r.small.length) add('tap ' + r.small.length, 'warn', r.small.join('\n'));
+    if (r.underNav > 0) add('under nav ' + r.underNav + 'px', 'warn');
+    if (r.navOpaque === false) add('nav translucent', 'warn', r.navBg);
+    if (f.errors && f.errors.length) add('js ' + f.errors.length, 'bad', f.errors.join('\n'));
+    if (!r.overflow && !r.small.length && !r.underNav && r.navOpaque !== false && !(f.errors || []).length) {
+      add('clean', 'ok');
+    }
+  }
+
+  function auditAll() {
+    frames.forEach(auditFrame);
+    const drawer = el('drawer'), body = el('drawerBody');
+    body.replaceChildren();
+    const lines = [];
+    frames.forEach((f) => {
+      const r = f.report;
+      if (!r) return;
+      if (r.overflow) lines.push([f.dev.n, 'horizontal overflow ' + r.overflow + 'px — ' + (r.wide.join(' ; ') || 'source not identified')]);
+      if (r.small.length) lines.push([f.dev.n, 'tap target under 24px — ' + r.small.join(' ; ')]);
+      if (r.underNav) lines.push([f.dev.n, 'first heading sits ' + r.underNav + 'px under the fixed header']);
+      if (r.navOpaque === false) lines.push([f.dev.n, 'header background is translucent (' + r.navBg + ')']);
+      (f.errors || []).forEach((e) => lines.push([f.dev.n, 'script: ' + e]));
+    });
+    el('drawerTitle').textContent = 'findings — ' + state.path + ' · ' + state.theme
+      + ' · ' + frames.length + ' frame' + (frames.length === 1 ? '' : 's');
+    if (!lines.length) {
+      const d = document.createElement('div');
+      d.className = 'none';
+      d.textContent = 'Nothing flagged: no overflow, no undersized tap target, no header collision, no script error.';
+      body.append(d);
+    } else {
+      const ul = document.createElement('ul');
+      lines.forEach(([who, what]) => {
+        const li = document.createElement('li');
+        const w = document.createElement('span');
+        w.className = 'who';
+        w.textContent = who + ': ';
+        li.append(w, document.createTextNode(what));
+        ul.append(li);
+      });
+      body.append(ul);
+    }
+    drawer.classList.add('open');
+  }
+
+  /* ── Synchronised scrolling ──────────────────────────────── */
+  let syncing = false;
+  function wireSync() {
+    setInterval(() => {
+      if (!state.sync || syncing) return;
+      // Poll rather than listen: frames are recreated often and a scroll
+      // listener per frame would leak across reloads.
+      let lead = null;
+      frames.forEach((f) => {
+        try {
+          const y = f.iframe.contentWindow.scrollY;
+          if (f._lastY === undefined) { f._lastY = y; return; }
+          if (Math.abs(y - f._lastY) > 2 && lead === null) lead = f;
+          f._lastY = y;
+        } catch (e) { /* frame not ready */ }
+      });
+      if (!lead) return;
+      syncing = true;
+      let ratio = 0;
+      try {
+        const w = lead.iframe.contentWindow, d = lead.iframe.contentDocument;
+        const max = d.documentElement.scrollHeight - w.innerHeight;
+        ratio = max > 0 ? w.scrollY / max : 0;
+      } catch (e) { syncing = false; return; }
+      frames.forEach((f) => {
+        if (f === lead) return;
+        try {
+          const w = f.iframe.contentWindow, d = f.iframe.contentDocument;
+          const max = d.documentElement.scrollHeight - w.innerHeight;
+          w.scrollTo(0, Math.round(ratio * Math.max(0, max)));
+          f._lastY = w.scrollY;
+        } catch (e) { /* not ready */ }
+      });
+      syncing = false;
+    }, 120);
+  }
+
+  /* ── Keyboard ────────────────────────────────────────────── */
+  document.addEventListener('keydown', (e) => {
+    if (/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName)) return;
+    if (e.key === 'r') { state.rotate = !state.rotate; render(); }
+    if (e.key === 's') { state.sync = !state.sync; syncToolbar(); }
+    if (e.key === 'a') auditAll();
+    if (e.key === 'i') { state.insets = !state.insets; render(); }
+    if (e.key === 'Escape') el('drawer').classList.remove('open');
+  });
+
+  readUrl();
+  buildPicker();
+  render();
+  wireSync();
+})();
+</script>
+</body>
+</html>
