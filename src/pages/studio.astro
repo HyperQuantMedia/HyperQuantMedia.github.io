@@ -4,7 +4,8 @@ import { Image } from 'astro:assets';
 import { titles, counts, statusLabel } from '../data/products.js';
 import Cta from '../components/Cta.astro';
 
-const modules = import.meta.glob('../assets/products/*.png', {
+// Typed for the same reason as Pedigree.astro's logo glob — see there.
+const modules = import.meta.glob<ImageMetadata>('../assets/products/*.png', {
   eager: true,
   import: 'default',
 });

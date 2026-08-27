@@ -207,8 +207,11 @@ const graph = pageGraph({ page, title, description, canonical, nodes: schema });
        load-event fallback. -->
   <script>
     const startField = () => import('../scripts/scene.js');
-    if ('requestIdleCallback' in window) {
-      requestIdleCallback(startField, { timeout: 2500 });
+    // Feature-tested with typeof rather than `'requestIdleCallback' in window`:
+    // the DOM lib declares the method as required, so an `in` check narrows the
+    // else branches to `never` and astro check rejects window.addEventListener.
+    if (typeof window.requestIdleCallback === 'function') {
+      window.requestIdleCallback(startField, { timeout: 2500 });
     } else if (document.readyState === 'complete') {
       setTimeout(startField, 200);
     } else {

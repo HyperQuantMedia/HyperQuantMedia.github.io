@@ -14,7 +14,10 @@ interface Props {
 }
 const { feature = false } = Astro.props;
 
-const modules = import.meta.glob('../assets/logos/*.png', {
+// The glob is typed so <Image> gets ImageMetadata rather than unknown:
+// `import: 'default'` alone leaves the value type open, and astro check
+// then rejects every src below.
+const modules = import.meta.glob<ImageMetadata>('../assets/logos/*.png', {
   eager: true,
   import: 'default',
 });

@@ -32,8 +32,10 @@
     "esbuild@0.28.2": true
   },
   "devDependencies": {
+    "@astrojs/check": "^0.9.10",
     "bootstrap": "5.3.3",
     "playwright": "1.62.1",
-    "sass": "1.103.1"
+    "sass": "1.103.1",
+    "typescript": "^6.0.3"
   }
 }
