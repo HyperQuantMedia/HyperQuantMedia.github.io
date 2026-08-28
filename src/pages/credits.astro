@@ -9,6 +9,57 @@ import PlatformIcon from '../components/PlatformIcon.astro';
 import Cta from '../components/Cta.astro';
 import { credits, creditPlatforms, creditYears } from '../data/credits.js';
 import { creditListNodes } from '../data/schema.js';
+import thumbVariants from '../data/thumb-variants.json';
+
+// Trailer thumbnails come from YouTube's own CDN, so the responsive ladder is
+// whatever files YouTube happens to have generated for that video:
+//
+//   mqdefault    320x180   16:9, always exists
+//   hqdefault    480x360   4:3,  always exists
+//   sddefault    640x480   4:3,  usually
+//   maxresdefault 1280x720 16:9, only if the source was uploaded at 720p+
+//
+// The last two are conditional and a missing one 404s, which in a srcset is a
+// broken image rather than a fallback -- the browser does not walk down the
+// list. So existence is settled ahead of time by `npm run probe:thumbs` and
+// committed to thumb-variants.json; this only ever emits a candidate the probe
+// saw. A video absent from the file gets the two guaranteed rungs and is
+// correct, just not as sharp.
+//
+// The 4:3 rungs are not a mistake sitting next to the 16:9 ones. The box is
+// `aspect-ratio: 16/9` with `object-fit: cover`, so a 4:3 thumbnail is cropped
+// to the same frame the 16:9 one fills -- top and bottom letterbox bars are
+// what gets cut. The crop is vertical, so the `w` descriptor still describes
+// the horizontal resolution honestly, which is the number srcset selects on.
+const THUMB_RUNGS = [
+  { file: 'mqdefault.jpg', w: 320, always: true },
+  { file: 'hqdefault.jpg', w: 480, always: true },
+  { file: 'sddefault.jpg', w: 640, key: 'sd' },
+  { file: 'maxresdefault.jpg', w: 1280, key: 'max' },
+];
+
+// Measured, not derived: a 27-viewport sweep of `.chart-video` against the
+// built page (scratchpad/thumb-probe). The grid runs 3 columns at lg and up,
+// 2 from sm to lg, and 1 below sm -- which is why the box JUMPS DOWN at 576px,
+// from 474px on the widest one-column phone to 209px on the narrowest
+// two-column tablet. The largest box on the whole page is that 474px, not
+// anything on a desktop.
+const THUMB_SIZES = [
+  '(min-width: 1400px) 381px',
+  '(min-width: 1200px) 321px',
+  '(min-width: 992px) 261px',
+  '(min-width: 768px) 299px',
+  '(min-width: 576px) 209px',
+  'calc(100vw - 66px)',
+].join(', ');
+
+const thumbSrcset = (id) => {
+  const have = thumbVariants[id] || {};
+  return THUMB_RUNGS
+    .filter((r) => r.always || have[r.key])
+    .map((r) => `https://i.ytimg.com/vi/${id}/${r.file} ${r.w}w`)
+    .join(', ');
+};
 
 // Platform-name -> icon key for the filter pills and the per-title platform
 // tags. 'All' gets the brand's own star glyph instead of a platform mark.
@@ -118,10 +169,12 @@ const byYear = creditYears.map((year) => ({
                         >
                           <img
                             src={`https://i.ytimg.com/vi/${c.video}/hqdefault.jpg`}
+                            srcset={thumbSrcset(c.video)}
+                            sizes={THUMB_SIZES}
                             alt=""
                             loading="lazy"
-                            width="480"
-                            height="360"
+                            width="1280"
+                            height="720"
                           />
                           <span class="chart-video-play" aria-hidden="true">
                             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>

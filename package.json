@@ -13,7 +13,8 @@
     "audit": "node tools/responsive-audit.mjs",
     "vendor:fonts": "node tools/vendor-fonts.mjs",
     "vendor": "npm run vendor:fonts && npm run vendor:bootstrap",
-    "vendor:bootstrap": "node tools/vendor-bootstrap.mjs"
+    "vendor:bootstrap": "node tools/vendor-bootstrap.mjs",
+    "probe:thumbs": "node tools/probe-thumbs.mjs"
   },
   "repository": {
     "type": "git",
