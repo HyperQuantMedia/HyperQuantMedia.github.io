@@ -29,6 +29,20 @@ export const statusMeaning = {
   Watching: 'Promising but unsettled — new, in beta, or repricing',
 };
 
+// Whether the Liked / Watching chip renders on each card. OFF on the owner's
+// call: the distinction reads as a rating to a visitor who has not met the
+// legend, and a landscape that is explicitly "not an endorsement for hire"
+// should not have the loudest thing on every card look like a score.
+//
+// A flag rather than a CSS `display: none`, and rather than deleting the
+// markup. Hidden text is still text: 306 cards' worth of "Liked" and
+// "Watching" would stay in the HTML for a crawler to read on the site's
+// largest content page while no visitor could see it, which is the one shape
+// of hidden content worth avoiding. The `status` field stays in the data below
+// and statusMeaning stays exported, so turning this back to `true` is the
+// whole change.
+export const showStatus = false;
+
 export const kinds = [
   {
     key: 'apps',

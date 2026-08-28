@@ -6,7 +6,7 @@
 // Linked from the Cosmos page's Compendium card rather than the main
 // navigation — it is a shelf inside the Cosmos, not a top-level world.
 import Base from '../layouts/Base.astro';
-import { kinds, entryCount, statusMeaning } from '../data/compendium.js';
+import { kinds, entryCount, statusMeaning, showStatus } from '../data/compendium.js';
 import { compendiumListNodes } from '../data/schema.js';
 import LinkIcon from '../components/LinkIcon.astro';
 
@@ -110,12 +110,14 @@ function destinations(e) {
                     >
                       <div class="comp-card-head">
                         <span class="chart-card-title comp-card-name">{e.name}</span>
-                        <span
-                          class={e.status === 'Liked' ? 'comp-status liked' : 'comp-status'}
-                          title={statusMeaning[e.status]}
-                        >
-                          <span class="dot"></span>{e.status}
-                        </span>
+                        {showStatus && (
+                          <span
+                            class={e.status === 'Liked' ? 'comp-status liked' : 'comp-status'}
+                            title={statusMeaning[e.status]}
+                          >
+                            <span class="dot"></span>{e.status}
+                          </span>
+                        )}
                       </div>
                       <div class="chart-card-partner">{e.capability}</div>
                       <p class="chart-card-note">{e.note}</p>
