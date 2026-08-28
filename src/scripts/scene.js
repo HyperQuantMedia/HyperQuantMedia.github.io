@@ -403,18 +403,16 @@ import {
     if (reduceMotion) renderFrame();
   });
 
-  /* Mouse / touch parallax */
-  let targetX = 0, targetY = 0, currentX = 0, currentY = 0;
-  window.addEventListener('mousemove', (e) => {
-    targetX = (e.clientX / window.innerWidth  - 0.5) * 64;
-    targetY = (e.clientY / window.innerHeight - 0.5) * 42;
-  });
-  window.addEventListener('touchmove', (e) => {
-    if (e.touches.length) {
-      targetX = (e.touches[0].clientX / window.innerWidth  - 0.5) * 42;
-      targetY = (e.touches[0].clientY / window.innerHeight - 0.5) * 26;
-    }
-  }, { passive: true });
+  /* Pointer parallax is GONE, deliberately -- the field used to track the
+     cursor (and a finger on touch), swinging the camera up to 64px across and
+     42px down. It read as the background chasing the pointer rather than as
+     depth, so it was cut on the owner's call.
+     Both halves went together: mousemove and touchmove drove one feature
+     through one pair of targets, and keeping the touch half would have left
+     the same effect alive on phones only.
+     Scroll parallax below is untouched -- that one is tied to the page moving,
+     not to where the pointer happens to be, and it is what keeps the fixed
+     canvas from reading as a printed backdrop. */
 
   /* Scroll parallax. The canvas is fixed, so without this the field sits dead
      still while the page moves over it, which reads as a printed backdrop
@@ -594,11 +592,8 @@ import {
 
     /* Exponential smoothing in continuous time: 1 - e^(-k*dt) equals the
        old per-frame factors exactly at 60Hz and stays correct elsewhere. */
-    const easePointer = 1 - Math.exp(-2.6 * dt);
     const easeScroll = 1 - Math.exp(-3.1 * dt);
     const easeWarp = 1 - Math.exp(-(warpTarget > warp ? 10.5 : 3.1) * dt);
-    currentX += (targetX - currentX) * easePointer;
-    currentY += (targetY - currentY) * easePointer;
     scrollCurrent += (scrollTarget - scrollCurrent) * easeScroll;
     warp += (warpTarget - warp) * easeWarp;
 
@@ -608,10 +603,11 @@ import {
     }
     linesMat.opacity = theme.lineOpacity * (1 - warp * 0.8);
 
-    camera.position.x = currentX;
-    // Pointer parallax plus a slow drift down the field as the page scrolls,
-    // plus the warp push into the field while navigating.
-    camera.position.y = -currentY - scrollCurrent * 150;
+    camera.position.x = 0;
+    // A slow drift down the field as the page scrolls, plus the warp push into
+    // the field while navigating. The pointer term that used to lead this line
+    // is gone -- see the note where its listeners were.
+    camera.position.y = -scrollCurrent * 150;
     camera.position.z = 560 - scrollCurrent * 90 - warp * 140;
     camera.lookAt(scene.position);
 
