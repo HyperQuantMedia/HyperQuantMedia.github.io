@@ -7,6 +7,9 @@
 #
 # public/CNAME travels into dist/ on every build, which is what keeps the
 # custom domain bound after a deploy.
+#
+# `npm run check` gates the build. A type error therefore blocks a deploy, which
+# is the deliberate trade: the alternative is a gate that exists and is ignored.
 name: Deploy site
 
 on:
@@ -26,7 +29,36 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # The type gate, ahead of the build and blocking it.
+  #
+  # It is a separate job rather than a step inside build/ because
+  # withastro/action bundles its own checkout, setup-node and install and gives
+  # no hook to run anything before the build. A failure here also has to read as
+  # "types", not as "the deploy broke".
+  #
+  # astro check regenerates .astro/types.d.ts itself, so this needs no committed
+  # generated file and works on a fresh clone.
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          # The same 24.x the build job and local development use. A different
+          # Node here would mean the gate and the build disagree about the
+          # toolchain that produced the errors.
+          node-version: 24
+          cache: npm
+      # `npm ci` and not `npm install`: the lockfile is the point of a gate.
+      # It prints an unapproved-script notice for @parcel/watcher (an optional
+      # native watcher pulled in by @astrojs/check) and that is expected --
+      # the repo's allowScripts policy names esbuild only, and nothing here
+      # needs the watcher.
+      - run: npm ci
+      - run: npm run check
+
   build:
+    needs: check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
