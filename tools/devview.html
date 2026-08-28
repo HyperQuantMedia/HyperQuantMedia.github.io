@@ -818,17 +818,20 @@ import { ALL, PATHS, PHONE_MAX, DPR_STEPS } from '/devview/devices.mjs';
           .find((x) => cur.endsWith(x.split(/\s+/)[0]));
         density = hit ? (hit.split(/\s+/)[1] || '') : '';
       }
-      /* naturalWidth is corrected for the srcset x descriptor -- the 400px file
-         behind `2x` reports 200 -- so the density has to be multiplied back
-         before any ratio means anything. Measured against this site's own build:
-         at deviceScaleFactor 2 the xbox logo loads the _1UAYHO variant, whose
-         real decoded width is 400, and naturalWidth says 200. Without this the
-         readout calls a retina host perfectly specified while it is pulling the
-         same surplus a 1x host does. */
+      /* naturalWidth is corrected by the selected candidate's density, so it is
+         never the file's own pixel width once a srcset is involved. With an x
+         descriptor the density is the descriptor (the 400px file behind `2x`
+         reports 200); with a w descriptor it is candidateWidth / the width
+         `sizes` resolves to, which collapses naturalWidth to roughly the CSS box.
+         Both measured on this build. Without undoing it the readout calls a
+         retina host perfectly specified while it pulls a 1x host's surplus. */
       const dm = /^([\d.]+)x$/.exec(density);
+      const wm = /^(\d+)w$/.exec(density);
       const densityNum = dm ? parseFloat(dm[1]) : 1;
-      const realW = Math.round(im.naturalWidth * densityNum);
-      const realH = Math.round(im.naturalHeight * densityNum);
+      const realW = wm ? parseInt(wm[1], 10) : Math.round(im.naturalWidth * densityNum);
+      const realH = wm
+        ? Math.round(im.naturalHeight * (parseInt(wm[1], 10) / (im.naturalWidth || 1)))
+        : Math.round(im.naturalHeight * densityNum);
 
       const r = byUrl.get(cur);
       /* Dev serves every <Image> through /_image?href=<encoded>&w=&f=, so the

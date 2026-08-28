@@ -14,6 +14,35 @@ interface Props {
 }
 const { feature = false } = Astro.props;
 
+/* Tile sizing, measured rather than declared -- see the width sweep quoted in
+   the commit. The two bands are IDENTICAL from 576px up; they diverge only
+   below it, where the feature band runs four columns and the plain band three,
+   so below 576 the plain band's tiles are the LARGER ones. That is the opposite
+   of what the layout reads like, which is why `sizes` is passed per context
+   instead of one string serving both.
+
+     >= 992px   132px   fixed tile width
+     768-991    163px   25% of a 696px grid -- the widest a tile ever gets
+     576-767    118px   25% of a 516px grid
+     < 576      feature 25% of the container, plain 33.33% of it
+
+   The vw values are the top of each band's measured range with a little air:
+   feature peaks at 22.5vw (108px at 480), plain at 30.2vw (145px at 480). */
+const tileSizes = [
+  '(min-width: 992px) 132px',
+  '(min-width: 768px) 163px',
+  '(min-width: 576px) 118px',
+  feature ? '23vw' : '31vw',
+].join(', ');
+
+/* The source logos are 400x400, so 400 is the ceiling and a 163px tile on a 3x
+   screen (which wants 489px) is served the best that exists. Everything else
+   this ladder covers: 132px@1x, 118px@2x, 132px@2x, 163px@2x, and the phone
+   boxes at 2x and 3x. It replaces densities={[1, 2]}, which could only ever
+   offer 200 and 400 -- so every device at 2x or better pulled the 400px file
+   into a 66-130px box, up to 3.03x more pixels than the box can show. */
+const tileWidths = [132, 160, 200, 264, 330, 400];
+
 // The glob is typed so <Image> gets ImageMetadata rather than unknown:
 // `import: 'default'` alone leaves the value type open, and astro check
 // then rejects every src below.
@@ -44,7 +73,7 @@ if (missing.length) {
     <div class="logo-grid fade-in-up">
       {partners.map((p) => (
         <div class="logo-tile" title={`${p.name} — ${p.relation}`}>
-          <Image src={logos[p.slug]} alt={p.name} width={200} height={200} densities={[1, 2]} loading="lazy" />
+          <Image src={logos[p.slug]} alt={p.name} width={400} height={400} widths={tileWidths} sizes={tileSizes} loading="lazy" />
         </div>
       ))}
     </div>

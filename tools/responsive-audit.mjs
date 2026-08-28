@@ -331,18 +331,27 @@ function measureImages() {
         .find((x) => cur.endsWith(x.split(/\s+/)[0]));
       density = hit ? (hit.split(/\s+/)[1] || '') : '';
     }
-    /* naturalWidth is NOT the file's pixel width when the srcset entry carries an
-       x descriptor: the spec corrects intrinsic dimensions by the density, so the
-       400px file behind `2x` reports 200. Measured, not assumed — at dpr 2 this
-       site's xbox logo loads xbox…_1UAYHO.webp, whose real decoded width is 400,
-       and naturalWidth says 200.
+    /* naturalWidth is NEVER the file's pixel width once a srcset is involved: the
+       spec corrects intrinsic dimensions by the selected candidate's density, and
+       both descriptor forms have one.
 
-       Every ratio below therefore multiplies it back. Getting this wrong does not
-       fail loudly; it reports a 2x device as perfectly specified while it is
-       downloading exactly the same surplus as the 1x one. */
+         x descriptor — the density is the descriptor. The 400px file behind `2x`
+           reports 200. Measured on this build: at deviceScaleFactor 2 the xbox
+           logo loads xbox…_1UAYHO.webp, real decoded width 400, naturalWidth 200.
+
+         w descriptor — the density is candidateWidth / the width `sizes` resolves
+           to, so naturalWidth collapses to roughly the CSS box itself. Measured:
+           a 160w candidate in a 23vw box at 320px reported 73, which is 23vw, not
+           160. The descriptor already IS the file's width, so it is used directly.
+
+       Getting this wrong does not fail loudly. It reported every w-descriptor
+       image as under-specified by exactly the amount of the correction — a whole
+       screen of findings that were an artefact of the measurement. */
     const dm = /^([\d.]+)x$/.exec(density);
-    const densityNum = dm ? parseFloat(dm[1]) : 1;
-    const realW = Math.round(im.naturalWidth * densityNum);
+    const wm = /^(\d+)w$/.exec(density);
+    const realW = wm
+      ? parseInt(wm[1], 10)
+      : Math.round(im.naturalWidth * (dm ? parseFloat(dm[1]) : 1));
 
     const r = byUrl.get(cur);
     const b = r ? (r.transferSize || r.encodedBodySize || 0) : 0;
