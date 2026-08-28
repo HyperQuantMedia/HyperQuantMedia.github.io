@@ -497,6 +497,10 @@ em { font-style: italic; }
      touched. The bar shrinks with the logo, so the logo still spans the bar
      at every width -- the bar is simply shorter on the smallest phones. */
   --nav-logo-sm: clamp(34px, calc((50vw - 84px) / 2.02), 52px);
+  /* Brand.astro's NAV_SIZES restates this clamp so the browser can pick the
+     right srcset candidate for the box. Change one and change the other, or
+     the nav mark goes back to being sized against a number that is not its
+     box. The 380px breakpoint there is where this clamp saturates at 52. */
 }
 /* Fallback to the component's own base, so a nav lockup rendered outside
    #mainNav (where --nav-logo is defined) still has a size rather than an

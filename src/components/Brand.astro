@@ -35,9 +35,48 @@ const { size = 'nav' } = Astro.props;
 // both together -- raising it in CSS alone would ship a 32px 1x variant into a
 // 72px box.
 const px = { nav: 60, footer: 72, lg: 64 }[size];
+
+// The nav lockup is the one of the three whose box is NOT the number above.
+// Below lg, style.css swaps --brand-mark for the --nav-logo-sm clamp, so the
+// rendered box runs from about 38px at 320px up to the 52px cap, and only
+// reaches 60 at lg and wider. `densities` cannot express that -- it multiplies
+// one fixed number -- so a 2x phone at 320px pulled the 120px variant into a
+// 38px box, 3.2x more pixels than the box can show.
+//
+// `widths` + `sizes` hands the browser the real box instead and lets it pick.
+// The breakpoints mirror style.css and must move with it:
+//
+//   >= 992px   60px, the flat --nav-logo
+//   >= 380px   52px, the clamp sitting on its upper bound (it saturates at
+//              378px: 2.02 x 52 + 84 = 189.04 = 50vw)
+//   below      the clamp's own linear middle, which is exact down to 320px
+//              (its 34px floor would only engage below a ~253px viewport)
+//
+// The ladder is every box x 1, 2 and 3, deduplicated: 38/52/60 at 1x, 76/104/120
+// at 2x, 156/180 at 3x (114 and 113 round into 120). The source mark is 256px,
+// so 180 is the real ceiling and nothing here asks for an upscale.
+//
+// Footer and lg keep `densities`: their boxes ARE the number above at every
+// width, so there is nothing for a `sizes` string to tell the browser.
+const NAV_WIDTHS = [38, 52, 60, 76, 104, 120, 156, 180];
+const NAV_SIZES =
+  '(min-width: 992px) 60px, (min-width: 380px) 52px, calc((50vw - 84px) / 2.02)';
 ---
 
 <span class={`brand-lockup brand-${size}`} style={`--brand-mark-base: ${px}px`}>
-  <Image src={mark} alt="" width={px} height={px} densities={[1, 2, 3]} class="brand-mark" loading="eager" />
+  {size === 'nav' ? (
+    <Image
+      src={mark}
+      alt=""
+      width={px}
+      height={px}
+      widths={NAV_WIDTHS}
+      sizes={NAV_SIZES}
+      class="brand-mark"
+      loading="eager"
+    />
+  ) : (
+    <Image src={mark} alt="" width={px} height={px} densities={[1, 2, 3]} class="brand-mark" loading="eager" />
+  )}
   <span class="brand-word"><span>Hyper</span><span>Quant</span><span>Media</span></span>
 </span>
