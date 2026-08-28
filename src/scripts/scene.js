@@ -60,7 +60,11 @@ import {
 
   /* Renderer */
   const renderer = new WebGLRenderer({ canvas, antialias: !isMobile, alpha: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  /* Read, never cache: devicePixelRatio moves when the window crosses to a
+     monitor with a different scale factor or the browser zoom changes, and the
+     resize handler re-applies it. comet.js and lost.js already do this. */
+  const dprCap = () => Math.min(window.devicePixelRatio || 1, 2);
+  renderer.setPixelRatio(dprCap());
   renderer.setClearColor(0x000000, 0);
   renderer.setSize(window.innerWidth, window.innerHeight);
 
@@ -444,6 +448,10 @@ import {
   window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
+    /* setPixelRatio only when it actually moved: it reallocates the drawing
+       buffer, and a plain resize does not need a second allocation. */
+    const dpr = dprCap();
+    if (dpr !== renderer.getPixelRatio()) renderer.setPixelRatio(dpr);
     renderer.setSize(window.innerWidth, window.innerHeight);
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => {
