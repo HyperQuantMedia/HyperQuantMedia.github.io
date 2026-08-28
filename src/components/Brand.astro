@@ -27,7 +27,14 @@ const { size = 'nav' } = Astro.props;
 // 1x variant into a 60px box -- the under-specified case devview's image
 // readout exists to catch. Below lg the lockup is smaller, which is the
 // harmless direction: a larger asset scaled down.
-const px = { nav: 60, footer: 32, lg: 64 }[size];
+// footer is 72, and is the largest of the three on purpose: the footer's first
+// column is a third of the container -- 380px at 1280 -- and the lockup is the
+// only thing in it besides one line of type and a row of buttons. It went 32 ->
+// 52 -> 72 across two passes, both times because it still read small against the
+// room it has. This number generates the srcset as well as the box, so it moves
+// both together -- raising it in CSS alone would ship a 32px 1x variant into a
+// 72px box.
+const px = { nav: 60, footer: 72, lg: 64 }[size];
 ---
 
 <span class={`brand-lockup brand-${size}`} style={`--brand-mark-base: ${px}px`}>

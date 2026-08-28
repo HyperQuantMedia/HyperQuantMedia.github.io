@@ -1344,7 +1344,7 @@ body.field-live::before { opacity: 0; }
 
 /* Social glyphs are inline SVG with no intrinsic size, so constrain them here
    or they expand to fill their button. */
-.social-link svg { width: 19px; height: 19px; display: block; }
+.social-link svg { width: 28px; height: 28px; display: block; }
 .social-link-lg { display: inline-flex; align-items: center; gap: 8px; }
 .social-link-lg svg { width: 17px; height: 17px; flex: none; }
 
@@ -2595,8 +2595,12 @@ a.ci-value:hover { color: var(--star); }
 .site-footer { background: var(--veil-deep); border-top: 1px solid var(--line-faint); }
 .footer-brand { font-family: var(--font-display); font-size: 1.05rem; font-weight: 700; letter-spacing: 0.01em; display: inline-flex; align-items: center; gap: 8px; }
 .footer-tagline { font-family: var(--font-mono); font-size: 0.76rem; color: var(--star-faint); margin-bottom: 0; line-height: 1.6; }
-.footer-social { display: flex; gap: 12px; }
-.social-link { display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; font-family: var(--font-mono); font-size: 0.7rem; font-weight: 400; text-transform: lowercase; color: var(--star-faint); border: 1px solid var(--line-faint); border-radius: 8px; transition: color var(--transition), border-color var(--transition), background var(--transition); }
+.footer-social { display: flex; gap: 16px; }
+/* 56px, from 38 by way of 46. The binding constraint is the narrowest viewport,
+   not taste: four buttons and three gaps come to 272px, and the footer column's
+   content box at a 320px viewport is 296px. That is the whole headroom left, so
+   any further growth has to wrap the row or shrink the gap. */
+.social-link { display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; font-family: var(--font-mono); font-size: 0.7rem; font-weight: 400; text-transform: lowercase; color: var(--star-faint); border: 1px solid var(--line-faint); border-radius: 8px; transition: color var(--transition), border-color var(--transition), background var(--transition); }
 .social-link:hover { color: var(--star); border-color: var(--line); background: var(--panel); }
 /* h2, not h5. These are the footer landmark's own section headings, and h5 was
    a font-size choice that made every page skip levels to reach them (h2 -> h5,

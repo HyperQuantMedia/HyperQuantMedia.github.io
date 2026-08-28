@@ -13,6 +13,12 @@ export const site = {
   url: 'https://hyperquantmedia.com',
   tagline:
     'We chart the uncharted — creative technology, developer tools, and interactive experiences.',
+  // The footer runs the claim alone. The three-noun tail is doing work on a
+  // page that has to introduce the company; under a lockup, beside a full
+  // navigation column, it is the same list the visitor has already walked.
+  // `tagline` stays whole -- it is the Organization slogan in the structured
+  // data, and a slogan is not trimmed for layout.
+  taglineShort: 'We chart the uncharted',
   description:
     'Creative technology, developer tools, and interactive experiences — built to make complex work navigable.',
   // Where the studio is. The Contact page states this publicly, so the
