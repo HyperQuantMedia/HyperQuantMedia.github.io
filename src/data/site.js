@@ -32,15 +32,40 @@ export const site = {
 
 // Order is the display order, in the navbar and the footer both. The theme
 // toggle is appended after these by Nav.astro.
+// An entry may carry `children`, which renders as a submenu under it. The
+// parent stays a real link to a real page -- the submenu is an addition to it,
+// never a replacement for it, so nothing becomes unreachable if the disclosure
+// fails to open.
 export const nav = [
   { href: '/', label: 'Home', key: 'home' },
   { href: '/vision', label: 'Vision', key: 'vision' },
   { href: '/services', label: 'Services', key: 'services' },
-  { href: '/cosmos', label: 'Cosmos', key: 'cosmos' },
+  {
+    href: '/cosmos',
+    label: 'Cosmos',
+    key: 'cosmos',
+    // Compendium sits under Cosmos because the two are the same subject seen
+    // from both sides: Cosmos is the tools we built, Compendium is the
+    // third-party tools we rate. It also had exactly ONE internal inbound link
+    // in the whole build (from /cosmos' body copy) while being the largest
+    // content page on the site -- a page reached from one place is crawled and
+    // weighted like one, whatever is on it.
+    children: [
+      { href: '/compendium', label: 'Compendium', key: 'compendium' },
+    ],
+  },
   { href: '/studio', label: 'Studio', key: 'studio' },
   { href: '/credits', label: 'Credits', key: 'credits' },
   { href: '/contact', label: 'Get In Touch', key: 'contact', cta: true },
 ];
+
+// Every entry, parents and children alike, in reading order. For consumers
+// that want a flat list of pages rather than the shape of the menu.
+export const navFlat = nav.flatMap((item) => [item, ...(item.children || [])]);
+
+// The parent an entry hangs under, or undefined when it is top level.
+export const navParentOf = (key) =>
+  nav.find((item) => (item.children || []).some((child) => child.key === key));
 
 // Visit analytics — Umami (umami.is), chosen for: location (country/region/
 // city) and visit-duration reporting, a free cloud tier, and no cookies —

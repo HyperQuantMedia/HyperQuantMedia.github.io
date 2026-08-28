@@ -314,8 +314,62 @@
        resolves to 'home'. */
     const page = document.body.dataset.page || 'home';
     document.querySelectorAll('[data-nav]').forEach((link) => {
-      if (link.getAttribute('data-nav') === page) link.classList.add('active');
+      if (link.getAttribute('data-nav') !== page) return;
+      link.classList.add('active');
+      /* A submenu child marks its parent too, so "you are in Cosmos" still
+         reads on the bar while the panel is shut and the child link is not
+         even on screen. */
+      const parentItem = link.closest('.nav-has-sub');
+      if (parentItem && !link.classList.contains('nav-sub-link')) return;
+      const parentLink = parentItem && parentItem.querySelector('.nav-sub-row > .nav-link');
+      if (parentLink) parentLink.classList.add('active');
     });
+
+    /* Nav submenu disclosure. Only at lg and up: below that the panel is not a
+       panel -- CSS leaves the child list open in the collapse menu and hides
+       this button -- so binding a toggle there would drive an aria-expanded
+       that describes nothing a visitor can see. */
+    const wideNav = window.matchMedia('(min-width: 992px)');
+
+    function closeSubmenus(except) {
+      document.querySelectorAll('.nav-has-sub.open').forEach((item) => {
+        if (item === except) return;
+        item.classList.remove('open');
+        const btn = item.querySelector('.nav-sub-toggle');
+        if (btn) btn.setAttribute('aria-expanded', 'false');
+      });
+    }
+
+    document.querySelectorAll('.nav-sub-toggle').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        if (!wideNav.matches) return;
+        e.preventDefault();
+        const item = btn.closest('.nav-has-sub');
+        if (!item) return;
+        const open = !item.classList.contains('open');
+        closeSubmenus(item);
+        item.classList.toggle('open', open);
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+    });
+
+    /* Shut on a click anywhere else, on Escape, and whenever the width crosses
+       back below lg -- an open panel left behind by a resize would be a
+       floating box over a collapse menu that no longer has a button to shut
+       it. Escape returns focus to the button that opened it, which is the
+       whole reason a disclosure is a button and not a hover. */
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest || !e.target.closest('.nav-has-sub')) closeSubmenus(null);
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      const open = document.querySelector('.nav-has-sub.open');
+      if (!open) return;
+      closeSubmenus(null);
+      const btn = open.querySelector('.nav-sub-toggle');
+      if (btn) btn.focus();
+    });
+    wideNav.addEventListener('change', () => closeSubmenus(null));
 
     /* Fade-in on scroll via IntersectionObserver */
     const fadeEls = document.querySelectorAll('.fade-in-up, .fade-in-left, .fade-in-right');

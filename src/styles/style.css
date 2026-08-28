@@ -507,6 +507,88 @@ em { font-style: italic; }
    invalid custom property and an auto-width image. */
 .brand-nav { --brand-mark: var(--nav-logo, var(--brand-mark-base)); }
 
+/* ── Nav submenu (Cosmos > Compendium) ──────────────────────────
+   Two different controls wearing one markup, split by width.
+
+   lg and up: an absolutely positioned panel under the parent, opened by the
+   disclosure button beside the parent link. Absolute so it cannot change the
+   bar's height when it opens -- the bar's height is the logo's, and a menu
+   that pushed it around would move the whole page.
+
+   Below lg: no panel and no disclosure at all. The collapse menu is already a
+   vertical list with room to spare, and nesting a disclosure inside the
+   hamburger's disclosure is a second gesture to discover for no gain. The
+   child simply sits indented under its parent, always visible. The button is
+   display:none there, which is also why app.js checks the media query before
+   treating aria-expanded as meaningful. */
+.nav-has-sub { position: relative; }
+.nav-sub-row { display: flex; align-items: center; gap: 2px; }
+.nav-sub-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  color: var(--star-dim);
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: color var(--transition), transform var(--transition);
+}
+.nav-sub-toggle svg { width: 13px; height: 13px; }
+.nav-sub-toggle:hover { color: var(--polaris); }
+.nav-sub-toggle[aria-expanded="true"] { color: var(--polaris); transform: rotate(180deg); }
+
+.nav-sub { list-style: none; margin: 0; padding: 0; }
+/* The indent reads as "under Cosmos" without a second disclosure to open. */
+.nav-sub-link { padding-left: 1.75rem !important; opacity: 0.85; }
+.nav-sub-link::before {
+  content: '';
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-right: 8px;
+  vertical-align: middle;
+  border-radius: 50%;
+  background: var(--polaris);
+  opacity: 0.55;
+}
+
+@media (min-width: 992px) {
+  .nav-sub-toggle { display: inline-flex; }
+  .nav-sub {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 70;
+    min-width: 190px;
+    padding: 6px;
+    background: var(--space-2);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.34);
+    /* Hidden by visibility rather than display so the panel can fade, and so
+       nothing inside it is focusable while it is shut -- `display:none` would
+       do the second part but not the first, and opacity alone would do the
+       first but leave a tab stop hanging in the dark. */
+    visibility: hidden;
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: opacity var(--transition), transform var(--transition),
+                visibility var(--transition);
+  }
+  .nav-has-sub.open .nav-sub { visibility: visible; opacity: 1; transform: none; }
+  .nav-sub-link {
+    display: block;
+    padding: 7px 12px !important;
+    white-space: nowrap;
+    opacity: 1;
+  }
+  .nav-sub-link::before { display: none; }
+}
+
 .brand-social { display: flex; align-items: center; gap: 4px; }
 /* The links sit beside the lockup now, so this is the padding between the two
    rather than an optical indent under the wordmark. The negative inset cancels

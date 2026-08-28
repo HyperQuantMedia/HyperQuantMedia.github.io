@@ -1,7 +1,7 @@
 ---
 // The footer, defined once. Navigation links and social links both come from
 // src/data/site.js, so they can never drift from the navbar.
-import { nav, socialLinks, email, site } from '../data/site.js';
+import { navFlat, socialLinks, email, site } from '../data/site.js';
 import SocialIcon from './SocialIcon.astro';
 import Brand from './Brand.astro';
 
@@ -36,8 +36,13 @@ const copyright = year > founded ? `${founded}-${year}` : `${founded}`;
         {/* Two balanced columns: seven links one-per-row made this the tallest
             thing in the footer at every width. The class carries the layout so
             the Contact list below, which has two entries, keeps one column. */}
+        {/* navFlat, not nav: the footer is a flat index of pages, so a submenu
+            child belongs in the list beside its parent rather than nested.
+            Compendium reaching the footer is half the point of giving it a
+            parent at all -- it had one internal inbound link in the whole
+            build before this. */}
         <ul class="footer-links footer-links-2col">
-          {nav.map((item) => (
+          {navFlat.map((item) => (
             <li><a href={item.href}>{item.label}</a></li>
           ))}
         </ul>

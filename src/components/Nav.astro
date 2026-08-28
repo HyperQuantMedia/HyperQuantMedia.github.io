@@ -85,15 +85,64 @@ const { page } = Astro.props;
     </div>
     <div class="collapse navbar-collapse" id="navbarNav">
       <ul class="navbar-nav ms-auto gap-1 align-items-lg-center">
+        {/* An entry with `children` renders as a link PLUS a separate disclosure
+            button, not as a button that swallows the link. Cosmos is a real
+            page and has to stay one press away; the pattern where a parent
+            only opens its submenu makes the parent page unreachable by the
+            obvious gesture, and unreachable entirely if the script fails.
+
+            Below lg the submenu is always open and the disclosure is hidden --
+            the collapse menu is already a vertical list with room, and a
+            disclosure nested inside a disclosure is a gesture nobody asked
+            for. The button and its aria-expanded only mean anything at lg and
+            up, which is why app.js reads a media query before binding. */}
         {nav.map((item) => (
-          <li class="nav-item">
-            <a
-              class={item.cta ? 'nav-link nav-cta' : 'nav-link'}
-              href={item.href}
-              data-nav={item.key}
-              aria-current={page === item.key ? 'page' : undefined}
-            >{item.label}</a>
-          </li>
+          item.children ? (
+            <li class="nav-item nav-has-sub" data-nav-sub={item.key}>
+              <span class="nav-sub-row">
+                <a
+                  class="nav-link"
+                  href={item.href}
+                  data-nav={item.key}
+                  aria-current={page === item.key ? 'page' : undefined}
+                >{item.label}</a>
+                <button
+                  class="nav-sub-toggle"
+                  type="button"
+                  aria-expanded="false"
+                  aria-controls={`nav-sub-${item.key}`}
+                  aria-label={`${item.label} submenu`}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                       stroke-width="2.5" stroke-linecap="round"
+                       stroke-linejoin="round" aria-hidden="true">
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                </button>
+              </span>
+              <ul class="nav-sub" id={`nav-sub-${item.key}`}>
+                {item.children.map((child) => (
+                  <li>
+                    <a
+                      class="nav-link nav-sub-link"
+                      href={child.href}
+                      data-nav={child.key}
+                      aria-current={page === child.key ? 'page' : undefined}
+                    >{child.label}</a>
+                  </li>
+                ))}
+              </ul>
+            </li>
+          ) : (
+            <li class="nav-item">
+              <a
+                class={item.cta ? 'nav-link nav-cta' : 'nav-link'}
+                href={item.href}
+                data-nav={item.key}
+                aria-current={page === item.key ? 'page' : undefined}
+              >{item.label}</a>
+            </li>
+          )
         ))}
         <li class="nav-item ms-lg-2 d-none d-lg-block"><ThemeToggle /></li>
       </ul>

@@ -24,7 +24,7 @@
  */
 
 import { site, socialLinks, email } from './site.js';
-import { nav } from './site.js';
+import { nav, navFlat, navParentOf } from './site.js';
 
 const abs = (path) => new URL(path, site.url).href;
 
@@ -108,14 +108,13 @@ const PAGE_TYPE = {
 };
 
 /* Breadcrumb label for a page, taken from the navbar so the trail and the nav
- * can never disagree. Pages absent from the nav (compendium, 404) name
- * themselves. */
+ * can never disagree. navFlat rather than nav, so a submenu child resolves to
+ * its own label. Pages absent from the nav entirely (404) name themselves. */
 const CRUMB_LABEL = {
-  compendium: 'Compendium',
   404: 'Not Found',
 };
 const crumbLabel = (page) =>
-  nav.find((n) => n.key === page)?.label || CRUMB_LABEL[page] || page;
+  navFlat.find((n) => n.key === page)?.label || CRUMB_LABEL[page] || page;
 
 /* The per-page graph. `nodes` is whatever the page itself wants to add. */
 export function pageGraph({ page, title, description, canonical, nodes = [] }) {
@@ -144,13 +143,30 @@ export function pageGraph({ page, title, description, canonical, nodes = [] }) {
   const graph = [logo, organization, website, webpage];
 
   if (!isHome) {
+    /* Three levels when the page hangs under a submenu parent, two otherwise.
+       The trail states the same relationship the navbar shows -- claiming a
+       flat Home > Compendium while the menu nests it under Cosmos would be the
+       structured-data lie this file exists to refuse. */
+    const parent = navParentOf(page);
+    const trail = [{ '@type': 'ListItem', position: 1, name: 'Home', item: site.url }];
+    if (parent) {
+      trail.push({
+        '@type': 'ListItem',
+        position: 2,
+        name: parent.label,
+        item: abs(`${parent.href.replace(/\/$/, '')}/`),
+      });
+    }
+    trail.push({
+      '@type': 'ListItem',
+      position: trail.length + 1,
+      name: crumbLabel(page),
+      item: canonical,
+    });
     graph.push({
       '@type': 'BreadcrumbList',
       '@id': breadcrumbId,
-      itemListElement: [
-        { '@type': 'ListItem', position: 1, name: 'Home', item: site.url },
-        { '@type': 'ListItem', position: 2, name: crumbLabel(page), item: canonical },
-      ],
+      itemListElement: trail,
     });
   }
 
