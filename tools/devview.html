@@ -818,6 +818,18 @@ import { ALL, PATHS, PHONE_MAX, DPR_STEPS } from '/devview/devices.mjs';
           .find((x) => cur.endsWith(x.split(/\s+/)[0]));
         density = hit ? (hit.split(/\s+/)[1] || '') : '';
       }
+      /* naturalWidth is corrected for the srcset x descriptor -- the 400px file
+         behind `2x` reports 200 -- so the density has to be multiplied back
+         before any ratio means anything. Measured against this site's own build:
+         at deviceScaleFactor 2 the xbox logo loads the _1UAYHO variant, whose
+         real decoded width is 400, and naturalWidth says 200. Without this the
+         readout calls a retina host perfectly specified while it is pulling the
+         same surplus a 1x host does. */
+      const dm = /^([\d.]+)x$/.exec(density);
+      const densityNum = dm ? parseFloat(dm[1]) : 1;
+      const realW = Math.round(im.naturalWidth * densityNum);
+      const realH = Math.round(im.naturalHeight * densityNum);
+
       const r = byUrl.get(cur);
       /* Dev serves every <Image> through /_image?href=<encoded>&w=&f=, so the
          raw URL is a wall of percent-escapes. Production is content-hashed
@@ -845,7 +857,10 @@ import { ALL, PATHS, PHONE_MAX, DPR_STEPS } from '/devview/devices.mjs';
         boxW: Math.round(box.width),
         box: Math.round(box.width) + '×' + Math.round(box.height),
         natW: im.naturalWidth,
-        natural: im.naturalWidth + '×' + im.naturalHeight,
+        realW,
+        /* The pixels really downloaded, not the density-corrected pair the DOM
+           reports -- the readout is here to be believed. */
+        natural: realW + '×' + realH,
       });
     });
 
@@ -859,8 +874,8 @@ import { ALL, PATHS, PHONE_MAX, DPR_STEPS } from '/devview/devices.mjs';
        image on the page as under-specified and mean nothing. The gap between
        the two ratios is reported once per frame instead, below. */
     const realDpr = window.devicePixelRatio || 1;
-    const overspec = imgs.filter((i) => i.boxW > 0 && i.natW > i.boxW * realDpr * 1.35);
-    const underspec = imgs.filter((i) => i.boxW > 0 && i.natW < i.boxW * realDpr * 0.9);
+    const overspec = imgs.filter((i) => i.boxW > 0 && i.realW > i.boxW * realDpr * 1.35);
+    const underspec = imgs.filter((i) => i.boxW > 0 && i.realW < i.boxW * realDpr * 0.9);
 
     f.report = {
       imgs,

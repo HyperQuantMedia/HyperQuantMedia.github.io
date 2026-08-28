@@ -33,6 +33,27 @@
  *   npm run audit -- --url http://127.0.0.1:4321
  *   npm run audit -- --engines chromium,webkit,firefox
  *   npm run audit -- --allow-third-party  # skip the off-origin request guard
+ *   npm run audit -- --dpr              # image density pass (see below)
+ *
+ * The density pass (--dpr)
+ *
+ *   Without it, every profile that has no Playwright device descriptor runs at
+ *   deviceScaleFactor 1 no matter what tools/devices.mjs declares — so
+ *   small-320 (@2x) and laptop-1280 (@2x) were being audited at a density no
+ *   real device has. --dpr sets deviceScaleFactor from the device table, which
+ *   is the only way `srcset` selection becomes honest: the browser picks the
+ *   variant, and nothing in script can make it pick another one.
+ *
+ *   It then reports, per profile, what the images actually cost and which ones
+ *   are over- or under-specified for the box they land in — the numbers devview
+ *   can only show for the host window's own ratio.
+ *
+ *   Run it against the BUILD, not the dev server: dev serves every <Image>
+ *   through /_image?href=…&w=…, so the bytes are the dev pipeline's, not the
+ *   ones a visitor pays. The pass says so if it detects that.
+ *
+ *       npm run build && npm run preview
+ *       npm run audit -- --dpr --url http://127.0.0.1:4321
  *
  * Engines
  *
@@ -77,6 +98,15 @@ const pages = value('pages', '')
 const group = value('group', 'device');   // 'device' = phone+tablet+desktop, no edges
 const engineNames = value('engines', 'chromium').split(',').map((s) => s.trim());
 const wantShots = flag('shots');
+/* Over/under-specified bands, kept identical to devview's so the two halves
+   never disagree about what counts as waste. 1.35 leaves room for the
+   fractional ratios (2.625 on a Pixel 7) without crying wolf. */
+const wantDpr = flag('dpr');
+const OVER_BAND = 1.35;
+const UNDER_BAND = 0.9;
+/* Below this, an over-specified image is a rounding argument, not a payload
+   problem, and listing it buries the ones that matter. */
+const WASTE_MIN_BYTES = 4096;
 
 const profiles = ALL.filter((d) => {
   if (group === 'all') return true;
@@ -113,6 +143,12 @@ try { baseHost = new URL(base).host; } catch (e) { /* reported on first goto */ 
  * iframe on a click, so it must never appear in an untouched page load, and if
  * it does that is a finding worth seeing. */
 const THIRD_PARTY_ALLOWED = ['cloud.umami.is', 'gateway.umami.is', 'i.ytimg.com'];
+
+/* Every per-page image measurement from a --dpr run, reported in one table at
+   the end rather than a line per page per profile — 9 pages x 13 profiles of
+   raw rows is not a report, it is a haystack. */
+const density = [];
+let devPipelineSeen = false;
 
 const ENGINES = { chromium, firefox, webkit };
 const shotDir = path.join(import.meta.dirname, '..', 'scratchpad', 'audit');
@@ -244,6 +280,96 @@ function measure({ inset, phoneMax, navCollapseBelow }) {
 }
 
 /* The open collapse menu, checked separately because it needs a click. */
+/* ── The in-page image measurement (--dpr) ─────────────────────
+ * Mirrors devview's img readout, with one difference that is the whole point:
+ * here the density is REAL. devview can only lie to script about
+ * devicePixelRatio, and `srcset` selection does not read script — so devview
+ * can never tell you which variant a 3x phone loads. Playwright's
+ * deviceScaleFactor moves the engine's own selection, so currentSrc becomes an
+ * honest answer.
+ *
+ * Bytes come from Resource Timing. Same-origin, so transferSize is populated;
+ * 0 means a cache hit, and encodedBodySize is what a cold load would still
+ * have cost, which is the number worth optimising against. */
+function measureImages() {
+  const byUrl = new Map();
+  try {
+    performance.getEntriesByType('resource').forEach((r) => {
+      if (r.initiatorType === 'img' || /\.(webp|avif|png|jpe?g|svg)(\?|$)/i.test(r.name)) {
+        byUrl.set(r.name, r);
+      }
+    });
+  } catch (e) { /* Resource Timing unavailable; the variant list still works */ }
+
+  const dpr = window.devicePixelRatio || 1;
+  const imgs = [];
+  let bytes = 0;
+  let devPipeline = false;
+
+  document.querySelectorAll('img').forEach((im) => {
+    const cur = im.currentSrc || im.src;
+    if (!cur) return;
+
+    /* Dev serves every <Image> through /_image?href=…&w=&f=, so a run against
+       the dev server is measuring the dev pipeline. Detected here rather than
+       guessed from the port, because `astro preview` uses 4321 too. */
+    let label = cur.split('/').pop().split('?')[0];
+    try {
+      const u = new URL(cur, location.href);
+      const href = u.searchParams.get('href');
+      if (href) {
+        devPipeline = true;
+        label = decodeURIComponent(href).split('?')[0].split('/').pop()
+          + ' w' + (u.searchParams.get('w') || '?');
+      }
+    } catch (e) { /* opaque url; the basename stands */ }
+
+    let density = '';
+    const set = im.getAttribute('srcset');
+    if (set) {
+      const hit = set.split(',').map((x) => x.trim())
+        .find((x) => cur.endsWith(x.split(/\s+/)[0]));
+      density = hit ? (hit.split(/\s+/)[1] || '') : '';
+    }
+    /* naturalWidth is NOT the file's pixel width when the srcset entry carries an
+       x descriptor: the spec corrects intrinsic dimensions by the density, so the
+       400px file behind `2x` reports 200. Measured, not assumed — at dpr 2 this
+       site's xbox logo loads xbox…_1UAYHO.webp, whose real decoded width is 400,
+       and naturalWidth says 200.
+
+       Every ratio below therefore multiplies it back. Getting this wrong does not
+       fail loudly; it reports a 2x device as perfectly specified while it is
+       downloading exactly the same surplus as the 1x one. */
+    const dm = /^([\d.]+)x$/.exec(density);
+    const densityNum = dm ? parseFloat(dm[1]) : 1;
+    const realW = Math.round(im.naturalWidth * densityNum);
+
+    const r = byUrl.get(cur);
+    const b = r ? (r.transferSize || r.encodedBodySize || 0) : 0;
+    bytes += b;
+
+    const box = im.getBoundingClientRect();
+    imgs.push({
+      name: label,
+      density: density || '(no srcset)',
+      bytes: b,
+      cached: !!r && r.transferSize === 0,
+      boxW: Math.round(box.width),
+      boxH: Math.round(box.height),
+      natW: im.naturalWidth,
+      natH: im.naturalHeight,
+      /* The pixels actually downloaded, density descriptor undone. Judge with
+         this; natW is kept only so a surprising row can be read back. */
+      realW,
+      /* An SVG has no meaningful intrinsic density, so it is measured but never
+         judged — it cannot be over-specified. */
+      vector: /\.svg(\?|$)/i.test(cur),
+    });
+  });
+
+  return { dpr, imgs, bytes, devPipeline };
+}
+
 function measureMenu() {
   const nav = document.getElementById('mainNav');
   const menu = document.getElementById('navbarNav');
@@ -308,6 +434,18 @@ for (const engineName of engineNames) {
           };
       if (prof.pw && !devices[prof.pw]) {
         findings.push(`${engineName}/${theme}/${prof.n}: playwright has no device descriptor "${prof.pw}" — audited as a plain viewport`);
+      }
+      /* The device table is the source of truth for density, not the descriptor.
+         Without --dpr a plain-viewport profile runs at deviceScaleFactor 1
+         whatever devices.mjs says, so small-320 (@2x) and laptop-1280 (@2x) were
+         being measured at a density no real device has. Setting it AFTER the
+         spread is deliberate: it also corrects a descriptor whose ratio has
+         drifted from the table, and the drift is reported rather than absorbed. */
+      if (wantDpr && prof.dpr) {
+        if (descriptor && descriptor.deviceScaleFactor !== prof.dpr) {
+          findings.push(`${engineName}/${theme}/${prof.n}: playwright's "${prof.pw}" descriptor is ${descriptor.deviceScaleFactor}x but devices.mjs says ${prof.dpr}x — audited at ${prof.dpr}x`);
+        }
+        ctxOpts.deviceScaleFactor = prof.dpr;
       }
       // WebKit and Firefox reject isMobile; only Chromium implements it.
       if (engineName !== 'chromium') delete ctxOpts.isMobile;
@@ -419,6 +557,12 @@ for (const engineName of engineNames) {
           clipOk = false;
         }
         if (r.small.length) findings.push(`${where}: tap target under 24px — ${r.small.join(' ; ')}`);
+
+        if (wantDpr) {
+          const im = await page.evaluate(measureImages);
+          if (im.devPipeline) devPipelineSeen = true;
+          density.push({ engine: engineName, theme, prof, page: p, ...im });
+        }
         if (r.navOpaque === false) {
           findings.push(`${where}: fixed header is translucent (${r.navBg}) — content reads through the bar`);
           navOpaqueOk = false;
@@ -478,6 +622,100 @@ for (const engineName of engineNames) {
     }
   }
   await browser.close();
+}
+
+/* ── Density report (--dpr) ────────────────────────────────────
+ * Rolled up rather than printed per page: 9 pages across 13 profiles is 117
+ * rows of the same four logos, and the answer worth having is "which image, in
+ * which box, at which density, and what does it cost".
+ *
+ * The waste figure is an estimate and is labelled as one. Bytes do not scale
+ * linearly with width — they scale roughly with area — so shipping a variant
+ * 1.5x wider than needed is closer to 2.2x the pixels, and (needed/actual)^2 is
+ * the honest shape of that. It is a ranking, not an invoice. */
+if (wantDpr) {
+  const kb = (n) => (n / 1024).toFixed(1) + ' KB';
+
+  if (devPipelineSeen) {
+    console.log('');
+    console.log('NOTE: at least one <img> came through /_image?href=… — that is the DEV');
+    console.log('      image pipeline, so these bytes are not what a visitor pays.');
+    console.log('      Run: npm run build && npm run preview, then --url that server.');
+  }
+
+  console.log('');
+  console.log('IMAGE DENSITY');
+  console.log('  profile           dpr   worst page        img bytes   over  under');
+  const byProfile = new Map();
+  for (const d of density) {
+    const cur = byProfile.get(d.prof.n);
+    const over = d.imgs.filter((i) => !i.vector && i.boxW > 0 && i.realW > i.boxW * d.dpr * OVER_BAND).length;
+    const under = d.imgs.filter((i) => !i.vector && i.boxW > 0 && i.realW < i.boxW * d.dpr * UNDER_BAND).length;
+    if (!cur || d.bytes > cur.bytes) byProfile.set(d.prof.n, { d, over, under, bytes: d.bytes });
+  }
+  for (const prof of profiles) {
+    const row = byProfile.get(prof.n);
+    if (!row) continue;
+    console.log(
+      '  ' + prof.n.padEnd(17) + (row.d.dpr + 'x').padEnd(6)
+      + row.d.page.padEnd(18) + kb(row.bytes).padStart(9)
+      + String(row.over).padStart(7) + String(row.under).padStart(7),
+    );
+  }
+
+  /* One row per (image, box width, density) — the same logo in a 132px tile and
+     in a 184px featured tile are two different problems with two different
+     answers, and collapsing them by filename is what hides that. */
+  const waste = new Map();
+  for (const d of density) {
+    for (const i of d.imgs) {
+      if (i.vector || !i.boxW || !i.realW) continue;
+      const needed = i.boxW * d.dpr;
+      if (i.realW <= needed * OVER_BAND) continue;
+      const key = `${i.name}|${i.boxW}|${d.dpr}`;
+      const est = i.bytes ? Math.round(i.bytes * (1 - (needed / i.realW) ** 2)) : 0;
+      const prev = waste.get(key);
+      if (!prev || est > prev.est) {
+        waste.set(key, { i, dpr: d.dpr, needed, est, page: d.page, prof: d.prof.n });
+      }
+    }
+  }
+
+  const rows = [...waste.values()].sort((a, b) => b.est - a.est);
+  if (rows.length) {
+    console.log('');
+    console.log('  over-specified (decoded pixels past what the box needs at this density):');
+    for (const w of rows.slice(0, 20)) {
+      console.log(
+        `    ${w.i.name}  ${w.prof} @${w.dpr}x ${w.page}`
+        + `  box ${w.i.boxW}px needs ${Math.round(w.needed)}px, decoded ${w.i.realW}px (${w.i.density})`
+        + ` (${(w.i.realW / w.needed).toFixed(2)}x)`
+        + (w.i.bytes ? `  ${kb(w.i.bytes)}, ~${kb(w.est)} of it wasted` : '  (cached, no byte figure)'),
+      );
+    }
+    if (rows.length > 20) console.log(`    … and ${rows.length - 20} more`);
+  }
+
+  /* Only the ones that cost something become findings. An image 1.4x
+     over-specified that weighs 900 bytes is a rounding argument; making it fail
+     a run would train everyone to ignore the run. */
+  for (const w of rows) {
+    if (w.est < WASTE_MIN_BYTES) continue;
+    findings.push(
+      `${w.prof} @${w.dpr}x ${w.page}: ${w.i.name} decodes ${w.i.realW}px into a ${w.i.boxW}px box`
+      + ` (needs ${Math.round(w.needed)}px) — ~${kb(w.est)} wasted`,
+    );
+  }
+
+  const underRows = [];
+  for (const d of density) {
+    for (const i of d.imgs) {
+      if (i.vector || !i.boxW || !i.realW) continue;
+      if (i.realW >= i.boxW * d.dpr * UNDER_BAND) continue;
+      underRows.push(`${d.prof.n} @${d.dpr}x ${d.page}: ${i.name} decodes ${i.realW}px into a ${i.boxW}px box at ${d.dpr}x — it will be soft`);
+    }
+  }
+  [...new Set(underRows)].forEach((u) => findings.push(u));
 }
 
 /* ── Report ────────────────────────────────────────────────── */
