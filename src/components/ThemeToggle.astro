@@ -1,8 +1,13 @@
 ---
-// Theme control with THREE states: follow the system (the default), locked
-// light, locked dark. It cycles, so there is a way back to following the
-// system -- a two-state toggle locks the visitor out of it on the first click,
-// because nothing ever clears the stored value again.
+// Theme control with three states: follow the system (the default), locked
+// light, locked dark. The system state is where every visitor starts, and the
+// first click leaves it for the opposite of what is on screen.
+//
+// Leaving it is one-way on the live site: a stored choice holds until the
+// visitor clears site data, so the half-disc does not return and the control
+// is a plain light/dark toggle from then on. Served from a dev host the cycle
+// still closes back to the system state, so it can be tested without wiping
+// storage. app.js owns that branch (nextTheme / devHost).
 //
 // The glyph shows the state you are IN, not the state you would switch to.
 // With two states those read the same way round; with three they do not, and

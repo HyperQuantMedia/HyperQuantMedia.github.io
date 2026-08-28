@@ -167,9 +167,7 @@
   /* With no explicit choice stored, keep following the system if it changes
      mid-session. */
   window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
-    let stored = null;
-    try { stored = localStorage.getItem('hqm-theme'); } catch (e) { /* ignore */ }
-    if (stored !== 'light' && stored !== 'dark') {
+    if (storedTheme() === null) {
       window.dispatchEvent(new CustomEvent('hqm:themechange', {
         detail: { theme: activeTheme() },
       }));
@@ -178,6 +176,45 @@
        offers the opposite of what is now on screen. */
     labelToggles();
   });
+
+  /* Local development only. The cycle back to "follow the device" is a
+     developer affordance, not a visitor one: once a visitor has stored a
+     choice, that choice sticks until they clear site data, so the half-disc
+     never returns on the live site. Served from a dev host, the third step is
+     kept so the default state can be reached again without wiping storage. */
+  function devHost() {
+    const h = location.hostname;
+    return h === 'localhost' || h === '127.0.0.1' || h === '[::1]' || h === '::1'
+      || h === '' || h.endsWith('.local');
+  }
+
+  /* The stored choice, or null for "no choice stored" -- which is the same
+     thing as "follows the device", and is what the absence of data-theme on
+     <html> means. Anything unrecognised in storage counts as no choice. */
+  function storedTheme() {
+    let v = null;
+    try { v = localStorage.getItem('hqm-theme'); } catch (e) { /* ignore */ }
+    return (v === 'light' || v === 'dark') ? v : null;
+  }
+
+  /* Where the next press lands. One function, because the click handler and
+     the label writer have to agree; two copies of this drifted apart once. */
+  function nextTheme() {
+    const stored = storedTheme();
+
+    /* First press from the default: the OPPOSITE of what is on screen. A fixed
+       "always light first" order does nothing at all on a light-OS machine, and
+       a theme button that appears dead on the first press is worse than none. */
+    if (stored === null) return activeTheme() === 'dark' ? 'light' : 'dark';
+
+    const other = stored === 'light' ? 'dark' : 'light';
+
+    /* Live site: two states from here on. Dev: the stored value having caught
+       up with what the device says is the end of the long way round, so that is
+       where the cycle returns to following the device. */
+    if (!devHost()) return other;
+    return stored === systemTheme() ? null : other;
+  }
 
   /* What the device itself asks for, ignoring any stored choice. */
   function systemTheme() {
@@ -191,13 +228,8 @@
      stored value is not knowable at build time and the static markup can only
      describe the control in general. */
   function labelToggles() {
-    let stored = null;
-    try { stored = localStorage.getItem('hqm-theme'); } catch (e) { /* ignore */ }
-    if (stored !== 'light' && stored !== 'dark') stored = null;
-
-    const next = stored === null
-      ? (activeTheme() === 'dark' ? 'light' : 'dark')
-      : (stored === systemTheme() ? null : (stored === 'light' ? 'dark' : 'light'));
+    const stored = storedTheme();
+    const next = nextTheme();
 
     const nameOf = (v) => (v === null ? 'follows your device' : v);
     const now = nameOf(stored);
@@ -237,41 +269,26 @@
       });
     }
 
-    /* Theme control: a THREE-state cycle, not a two-state toggle.
-       No stored value means "follow the device", which is the default and is
-       handled entirely in CSS. The old toggle only ever wrote that value and
-       never cleared it, so the first click locked a visitor out of following
-       their device for good -- with no way back short of clearing site data.
+    /* Theme control. No stored value means "follow the device", which is the
+       default, is what the half-disc glyph shows, and is handled entirely in
+       CSS. The first press leaves it for the OPPOSITE of what is on screen, so
+       the press is always visible whichever way the device is set.
 
-       The cycle, from wherever it is:
+       On the live site that first press is one-way: a stored choice is a choice,
+       and it holds until the visitor clears site data. From then on the control
+       is a plain two-state toggle and the half-disc does not come back.
 
-         following the device  ->  the OPPOSITE of what is on screen
-         that explicit choice  ->  the other explicit choice
-         the other one         ->  back to following the device
-
-       Starting with the opposite of what is shown is what keeps the first click
-       from being invisible. A fixed "always light first" order does nothing at
-       all on a light-OS machine, and a theme button that appears dead on the
-       first press is worse than no button.
-
-       The third step is recognised by the stored value having caught up with
-       what the device itself says: that only happens after going the long way
-       round, so it is exactly the end of the cycle. Both branches are covered
-       -- on a dark device system -> light -> dark -> system, and on a light one
-       system -> dark -> light -> system.
+       In local development the third step survives -- once the stored value has
+       caught up with what the device itself says, the next press clears it --
+       so the default state is reachable again without wiping storage. See
+       nextTheme() and devHost(); the branch lives there, not here.
 
        There are TWO toggles in the DOM -- one in the bar for below-lg, one in
        the nav list for lg and up -- so this binds by class, not by id. Both
        read the live state, so neither can drift from the other. */
     document.querySelectorAll('.theme-toggle').forEach((themeBtn) => {
       themeBtn.addEventListener('click', () => {
-        let stored = null;
-        try { stored = localStorage.getItem('hqm-theme'); } catch (e) { /* ignore */ }
-        if (stored !== 'light' && stored !== 'dark') stored = null;
-
-        const next = stored === null
-          ? (activeTheme() === 'dark' ? 'light' : 'dark')
-          : (stored === systemTheme() ? null : (stored === 'light' ? 'dark' : 'light'));
+        const next = nextTheme();
 
         if (next === null) {
           document.documentElement.removeAttribute('data-theme');
