@@ -1,19 +1,32 @@
 ---
-// Light/dark toggle. Default state is "follow the system"; a click stores an
-// explicit choice.
+// Theme control with THREE states: follow the system (the default), locked
+// light, locked dark. It cycles, so there is a way back to following the
+// system -- a two-state toggle locks the visitor out of it on the first click,
+// because nothing ever clears the stored value again.
+//
+// The glyph shows the state you are IN, not the state you would switch to.
+// With two states those read the same way round; with three they do not, and
+// "which one am I on" is the question a cycling control has to answer.
 //
 // Rendered TWICE per page -- once in the bar for below-lg, once in the nav
 // list for lg and up -- so it carries no id. app.js binds every .theme-toggle
-// and both stay in step, because they read the live theme rather than any
+// and both stay in step, because they read the live state rather than any
 // per-button state. Do not reintroduce an id here.
-// Both glyphs are in the DOM and CSS decides which shows, so
-// the button is correct on first paint without waiting for JavaScript.
+//
+// All three glyphs are in the DOM and CSS decides which shows, so the button is
+// correct on first paint without waiting for JavaScript. That works because
+// "follow the system" is exactly the absence of data-theme on <html>: the
+// inline script in Base.astro only ever sets the attribute for a STORED choice.
+//
+// The icon is not asked to teach the concept on its own -- app.js keeps title
+// and aria-label naming the state in words, because an adaptive-theme glyph is
+// not something a general visitor is expected to already know.
 ---
 
 <button
   class="theme-toggle"
   type="button"
-  aria-label="Switch between light and dark theme"
+  aria-label="Switch theme: follows your device, light, or dark"
   title="Switch theme"
 >
   <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -24,5 +37,16 @@
   <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
        stroke-width="2" stroke-linecap="round" aria-hidden="true">
     <path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z" />
+  </svg>
+  <!-- "Follows your device": a disc with one half filled. A monitor glyph is
+       the usual choice and was rejected -- it reads as "desktop" to anyone who
+       has not met a three-state theme control, and most visitors have not. A
+       half-filled disc says "some of each" without naming a device, and at the
+       17px this renders at it stays one legible shape, which a sun-and-moon
+       composite does not. -->
+  <svg class="icon-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+       stroke-width="2" aria-hidden="true">
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 3a9 9 0 000 18z" fill="currentColor" stroke="none" />
   </svg>
 </button>

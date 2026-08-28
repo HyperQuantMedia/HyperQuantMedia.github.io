@@ -1457,18 +1457,21 @@ body.field-live::before { opacity: 0; }
   border-color: var(--polaris-glow);
   background: var(--polaris-dim);
 }
-.theme-toggle svg { width: 17px; height: 17px; display: block; }
-/* Only one glyph shows at a time: sun while dark is active (click for light),
-   moon while light is active. */
-.theme-toggle .icon-moon { display: none; }
-:root[data-theme="light"] .theme-toggle .icon-sun { display: none; }
-:root[data-theme="light"] .theme-toggle .icon-moon { display: block; }
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]) .theme-toggle .icon-sun { display: none; }
-  :root:not([data-theme="dark"]) .theme-toggle .icon-moon { display: block; }
-}
-:root[data-theme="dark"] .theme-toggle .icon-sun { display: block; }
-:root[data-theme="dark"] .theme-toggle .icon-moon { display: none; }
+.theme-toggle svg { width: 17px; height: 17px; }
+/* One glyph per STATE, not per ground: half-disc while following the device,
+   sun while locked light, moon while locked dark.
+ *
+ * This reads only data-theme, and needs no prefers-color-scheme pair at all --
+ * "follows your device" IS the absence of the attribute, because the inline
+ * script in Base.astro sets it only for a stored choice. The old rules had to
+ * mirror themselves into a media query to work out the same answer, and those
+ * two blocks then had to be kept in sync by hand. */
+.theme-toggle svg { display: none; }
+.theme-toggle .icon-auto { display: block; }
+:root[data-theme="light"] .theme-toggle .icon-auto { display: none; }
+:root[data-theme="light"] .theme-toggle .icon-sun { display: block; }
+:root[data-theme="dark"] .theme-toggle .icon-auto { display: none; }
+:root[data-theme="dark"] .theme-toggle .icon-moon { display: block; }
 
 /* ── Back to top ── */
 .to-top {

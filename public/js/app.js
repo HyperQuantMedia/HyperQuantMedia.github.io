@@ -174,7 +174,40 @@
         detail: { theme: activeTheme() },
       }));
     }
+    /* The state name did not change, but "switch to ..." did: the next press
+       offers the opposite of what is now on screen. */
+    labelToggles();
   });
+
+  /* What the device itself asks for, ignoring any stored choice. */
+  function systemTheme() {
+    return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  }
+
+  /* The glyph alone cannot carry three states to a general visitor -- an
+     adaptive-theme icon is not common knowledge -- so the state is named in
+     words on both the tooltip and the accessible name, and the label also says
+     what the next press does. Written on init as well as on click, because the
+     stored value is not knowable at build time and the static markup can only
+     describe the control in general. */
+  function labelToggles() {
+    let stored = null;
+    try { stored = localStorage.getItem('hqm-theme'); } catch (e) { /* ignore */ }
+    if (stored !== 'light' && stored !== 'dark') stored = null;
+
+    const next = stored === null
+      ? (activeTheme() === 'dark' ? 'light' : 'dark')
+      : (stored === systemTheme() ? null : (stored === 'light' ? 'dark' : 'light'));
+
+    const nameOf = (v) => (v === null ? 'follows your device' : v);
+    const now = nameOf(stored);
+    const then = nameOf(next);
+
+    document.querySelectorAll('.theme-toggle').forEach((b) => {
+      b.title = 'Theme: ' + now;
+      b.setAttribute('aria-label', 'Theme: ' + now + '. Switch to ' + then + '.');
+    });
+  }
 
   function activeTheme() {
     const set = document.documentElement.getAttribute('data-theme');
@@ -204,27 +237,59 @@
       });
     }
 
-    /* Theme toggle.
-       No stored value means "follow the system", which is the default and is
-       handled entirely in CSS. Clicking stores an explicit choice, resolved
-       against what is actually being displayed right now rather than against
-       the stored value -- otherwise the first click from the system default
-       can be a no-op.
+    /* Theme control: a THREE-state cycle, not a two-state toggle.
+       No stored value means "follow the device", which is the default and is
+       handled entirely in CSS. The old toggle only ever wrote that value and
+       never cleared it, so the first click locked a visitor out of following
+       their device for good -- with no way back short of clearing site data.
+
+       The cycle, from wherever it is:
+
+         following the device  ->  the OPPOSITE of what is on screen
+         that explicit choice  ->  the other explicit choice
+         the other one         ->  back to following the device
+
+       Starting with the opposite of what is shown is what keeps the first click
+       from being invisible. A fixed "always light first" order does nothing at
+       all on a light-OS machine, and a theme button that appears dead on the
+       first press is worse than no button.
+
+       The third step is recognised by the stored value having caught up with
+       what the device itself says: that only happens after going the long way
+       round, so it is exactly the end of the cycle. Both branches are covered
+       -- on a dark device system -> light -> dark -> system, and on a light one
+       system -> dark -> light -> system.
 
        There are TWO toggles in the DOM -- one in the bar for below-lg, one in
        the nav list for lg and up -- so this binds by class, not by id. Both
-       resolve against the live theme, so neither can drift from the other. */
+       read the live state, so neither can drift from the other. */
     document.querySelectorAll('.theme-toggle').forEach((themeBtn) => {
       themeBtn.addEventListener('click', () => {
-        const theme = activeTheme() === 'dark' ? 'light' : 'dark';
-        document.documentElement.setAttribute('data-theme', theme);
-        try {
-          localStorage.setItem('hqm-theme', theme);
-        } catch (e) { /* storage unavailable; the attribute still applies */ }
+        let stored = null;
+        try { stored = localStorage.getItem('hqm-theme'); } catch (e) { /* ignore */ }
+        if (stored !== 'light' && stored !== 'dark') stored = null;
+
+        const next = stored === null
+          ? (activeTheme() === 'dark' ? 'light' : 'dark')
+          : (stored === systemTheme() ? null : (stored === 'light' ? 'dark' : 'light'));
+
+        if (next === null) {
+          document.documentElement.removeAttribute('data-theme');
+          try { localStorage.removeItem('hqm-theme'); } catch (e) { /* ignore */ }
+        } else {
+          document.documentElement.setAttribute('data-theme', next);
+          try {
+            localStorage.setItem('hqm-theme', next);
+          } catch (e) { /* storage unavailable; the attribute still applies */ }
+        }
+
+        labelToggles();
         // Let the starfield recolour itself for the new ground.
-        window.dispatchEvent(new CustomEvent('hqm:themechange', { detail: { theme } }));
+        window.dispatchEvent(new CustomEvent('hqm:themechange', { detail: { theme: activeTheme() } }));
       });
     });
+
+    labelToggles();
 
     /* Active nav link — read the page key the layout stamped on <body>.
        Deriving it from the URL instead breaks on clean URLs: '/contact/'
