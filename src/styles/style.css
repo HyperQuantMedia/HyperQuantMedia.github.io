@@ -387,8 +387,15 @@ em { font-style: italic; }
   #mainNav .nav-row { display: contents; }
 }
 
+/* The bar is sized BY the logo, not around it. It used to be 18px of padding
+   with a 36px mark inside a 107px bar -- the mark was 34% of the header's
+   height with 53px of dead space under it. Now the inset is the only vertical
+   padding and the lockup fills what is left, so the logo spans the bar at
+   every width. Scrolled shrinks the inset, not the logo: the bar tightening on
+   scroll should not make the brand jump size. */
 #mainNav {
-  padding: 18px 0;
+  --nav-inset: 6px;
+  padding: var(--nav-inset) 0;
   transition: padding var(--transition), box-shadow var(--transition);
   background: var(--nav-scrim);
   /* The hairline is permanent now, not a scrolled-state flourish: an opaque bar
@@ -398,7 +405,7 @@ em { font-style: italic; }
 }
 
 #mainNav.scrolled {
-  padding: 11px 0;
+  --nav-inset: 4px;
   box-shadow: 0 1px 0 var(--line-faint), 0 20px 50px -30px var(--shadow-hard);
 }
 
@@ -415,7 +422,11 @@ em { font-style: italic; }
 }
 
 /* Brand block: lockup stacked over its social row. */
-.brand-block { display: flex; flex-direction: column; gap: 5px; }
+/* Row, not column: the social links sit beside the lockup with a padding gap.
+   Stacked under it, they were what made the desktop bar 107px tall while the
+   logo was 36px of it. Below lg the block holds the lockup alone -- the social
+   row is centred on the bar there -- so the direction is moot at those widths. */
+.brand-block { display: flex; align-items: center; gap: 5px; }
 
 /* --brand-mark is derived from the inline --brand-mark-base Brand.astro sets,
    rather than being that inline value: an inline style outranks every selector,
@@ -463,10 +474,50 @@ em { font-style: italic; }
 }
 .brand-lg .brand-word     { letter-spacing: 0.12em; }
 
+/* The nav lockup drives the bar's height, so its size lives with the bar, not
+   with Brand.astro's per-context default. Bar height = logo + 2 x --nav-inset:
+   72px at rest on desktop, 64px below lg -- both a little under the 76/107 they
+   replace, because the dead space went and the logo did not.
+
+   --nav-logo-sm is a variable rather than a literal because the smallest phones
+   cannot hold a full-height lockup, the centred social row, the theme control
+   and the hamburger on one line; it steps down at 400px and again at 350px.
+   Measured, not guessed -- see the header probe in the session scratchpad. */
+#mainNav {
+  --nav-logo: 60px;
+  /* Below lg the lockup shares its line with a centred social row, the theme
+     control and the hamburger, so its size is capped by the space actually
+     left rather than by a flat number. The centred row means the lockup may
+     reach the viewport's midpoint minus half that row (54px at these icon
+     sizes) minus 8px of clearance and the 12px gutter; the lockup measures
+     2.02x its mark in width, hence the divisor. Clamped so it neither exceeds
+     the desktop-adjacent 52px nor collapses below a legible 34px.
+
+     At 320px a flat 52px overlapped the social row by 21px, and at 360px it
+     touched. The bar shrinks with the logo, so the logo still spans the bar
+     at every width -- the bar is simply shorter on the smallest phones. */
+  --nav-logo-sm: clamp(34px, calc((50vw - 84px) / 2.02), 52px);
+}
+/* Fallback to the component's own base, so a nav lockup rendered outside
+   #mainNav (where --nav-logo is defined) still has a size rather than an
+   invalid custom property and an auto-width image. */
+.brand-nav { --brand-mark: var(--nav-logo, var(--brand-mark-base)); }
+
 .brand-social { display: flex; align-items: center; gap: 4px; }
-/* Optically align the icon row with the wordmark, not the mark. The negative
-   inset cancels the first link's hit-area padding so the glyph itself lines up. */
-.brand-social.d-lg-flex { padding-left: 40px; }
+/* The links sit beside the lockup now, so this is the padding between the two
+   rather than an optical indent under the wordmark. The negative inset cancels
+   the first link's own hit-area padding, so the gap you see is the gap set. */
+.brand-social.d-lg-flex { padding-left: 18px; margin-left: -6px; }
+
+/* 992-1199 is the tight end of desktop: full-height lockup, the icon row and
+   seven nav links share one line, and at 992 the icons came within 5px of
+   "Home". The logo is the thing being sized here, so the icons give instead --
+   26px still clears WCAG 2.5.8's 24. Measured after: ~27px of clearance. */
+@media (min-width: 992px) and (max-width: 1199.98px) {
+  .brand-social.d-lg-flex { padding-left: 12px; }
+  .brand-social.d-lg-flex .brand-social-link { width: 26px; height: 26px; }
+  .brand-social.d-lg-flex .brand-social-link svg { width: 15px; height: 15px; }
+}
 .brand-social-link {
   /* The hit area must clear 24x24 (WCAG 2.5.8), so the padding around the
      glyph is load-bearing -- do not collapse it to make the row tighter. */
@@ -523,7 +574,7 @@ em { font-style: italic; }
    a little more room than the old text-only lockup needed. */
 @media (max-width: 991.98px) {
   .brand-block { gap: 0; }
-  .brand-nav { --brand-mark: 30px; }
+  .brand-nav { --brand-mark: var(--nav-logo-sm, var(--brand-mark-base)); }
 
   /* The collapse menu now sits on the nav's own opaque ground, which means it
      can no longer be dismissed by reading through it -- so it must never be
@@ -2076,7 +2127,7 @@ body.field-live::before { opacity: 0; }
   position: relative;
   /* The field's bodies link to these cards, and the navbar is fixed — without
      this the anchor lands under it. Matches .chart-year on the Star Chart. */
-  scroll-margin-top: 96px;
+  scroll-margin-top: 80px;
   display: flex;
   flex-direction: row-reverse;
   align-items: center;
@@ -3009,7 +3060,7 @@ a.ci-value:hover { color: var(--star); }
 }
 
 /* Anchor jumps land below the fixed navbar. */
-.chart-year { scroll-margin-top: 96px; }
+.chart-year { scroll-margin-top: 80px; }
 
 .chart-empty { padding: 60px 0 40px; }
 .chart-empty-glyph {

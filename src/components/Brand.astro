@@ -21,7 +21,13 @@ const { size = 'nav' } = Astro.props;
 // any stylesheet selector, so publishing the final value here would have made
 // the below-lg shrink in style.css unreachable. CSS derives --brand-mark from
 // this and stays free to override it per width.
-const px = { nav: 36, footer: 32, lg: 64 }[size];
+// nav is 60 because that is the size style.css renders the nav lockup at (it
+// sets --brand-mark from --nav-logo so the logo spans the bar). This number
+// generates the srcset, so leaving it at the old 36 would have shipped a 36px
+// 1x variant into a 60px box -- the under-specified case devview's image
+// readout exists to catch. Below lg the lockup is smaller, which is the
+// harmless direction: a larger asset scaled down.
+const px = { nav: 60, footer: 32, lg: 64 }[size];
 ---
 
 <span class={`brand-lockup brand-${size}`} style={`--brand-mark-base: ${px}px`}>
