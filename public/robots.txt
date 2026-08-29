@@ -1,4 +1,55 @@
+# Everything is crawlable. The site is nine public pages with nothing behind a
+# login, so there is nothing to withhold.
 User-agent: *
 Allow: /
 
+# AI answer engines, named explicitly.
+#
+# The `*` group above already permits every one of these, so today these lines
+# change no behaviour. They are here for two reasons that only pay off later:
+#
+#   1. The stance is now a decision on the record rather than a default nobody
+#      chose. Being cited in AI answers is discovery this studio cannot buy,
+#      and that is the position -- stated, not inherited.
+#   2. robots.txt groups do not merge. A crawler that matches a named group
+#      reads THAT group and ignores `*` entirely. So if a future `Disallow`
+#      lands in `*`, these agents keep crawling the disallowed path until the
+#      rule is repeated here.
+#
+# Point 2 is a footgun, and it is the price of point 1: ANY Disallow added to
+# the `*` group above must be added to this group too, or it silently does not
+# apply to the crawlers most likely to quote us.
+#
+# Tokens are the vendors' documented ones. They fall in three kinds, all wanted
+# here: search crawlers that build a retrieval index (OAI-SearchBot,
+# Claude-SearchBot, PerplexityBot), user-triggered fetchers that pull a page
+# because someone asked about it in a chat (ChatGPT-User, Claude-User,
+# Perplexity-User, MistralAI-User), and training crawlers whose corpora are how
+# a model knows the company exists at all (GPTBot, ClaudeBot, CCBot).
+#
+# Google-Extended and Applebot-Extended are not crawlers. They are opt-out
+# switches over content Googlebot and Applebot already fetched, governing
+# whether it may ground AI Overviews / Gemini and Apple Intelligence. Allowing
+# them is the whole point of this block.
+User-agent: OAI-SearchBot
+User-agent: ChatGPT-User
+User-agent: GPTBot
+User-agent: Claude-SearchBot
+User-agent: Claude-User
+User-agent: ClaudeBot
+User-agent: PerplexityBot
+User-agent: Perplexity-User
+User-agent: Google-Extended
+User-agent: Applebot-Extended
+User-agent: Amazonbot
+User-agent: Meta-ExternalAgent
+User-agent: MistralAI-User
+User-agent: cohere-ai
+User-agent: YouBot
+User-agent: CCBot
+Allow: /
+
+# One sitemap serves every engine -- the format is not vendor-specific and
+# there is no such thing as a Bing sitemap or a Google sitemap. Sitemap
+# directives sit outside the groups above and apply globally.
 Sitemap: https://hyperquantmedia.com/sitemap-index.xml
