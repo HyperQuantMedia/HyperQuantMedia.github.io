@@ -2,7 +2,7 @@
   "name": "hyperquantmedia.github.io",
   "version": "1.0.0",
   "private": true,
-  "description": "HyperQuant Media website — Astro static site",
+  "description": "HyperQuant Media website \u2014 Astro static site",
   "type": "module",
   "scripts": {
     "dev": "astro dev --host",
@@ -14,7 +14,8 @@
     "vendor:fonts": "node tools/vendor-fonts.mjs",
     "vendor": "npm run vendor:fonts && npm run vendor:bootstrap",
     "vendor:bootstrap": "node tools/vendor-bootstrap.mjs",
-    "probe:thumbs": "node tools/probe-thumbs.mjs"
+    "probe:thumbs": "node tools/probe-thumbs.mjs",
+    "submit:indexnow": "node tools/indexnow.mjs"
   },
   "repository": {
     "type": "git",
