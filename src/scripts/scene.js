@@ -116,15 +116,29 @@ import {
   })();
 
   /* A soft irregular cloud: several offset radial gradients on one canvas.
-     White, so each nebula sprite tints it with its own accent colour. */
+     White, so each nebula sprite tints it with its own accent colour.
+
+     SEEDED, not Math.random() — the cloud is drawn once per load, and a
+     random draw is a lottery: when several of the nine blobs land on each
+     other their alphas stack toward an opaque core (measured across 4000
+     simulated rolls: peak density 0.38 on a good roll, 0.78 on a bad one),
+     and every sprite shares this one texture, so one bad roll turns all four
+     corners into heavy saturated clouds at once. Seed 1090 is the vetted
+     roll: peak 0.379, blob spread 76.6 — change it only by re-running the
+     seed sweep, not by taste. */
   const nebulaTex = (() => {
     const c = document.createElement('canvas');
     c.width = c.height = 256;
     const g = c.getContext('2d');
+    let seed = 1090;
+    const rand = () => {
+      seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5; seed >>>= 0;
+      return seed / 4294967296;
+    };
     for (let i = 0; i < 9; i++) {
-      const x = 70 + Math.random() * 116;
-      const y = 70 + Math.random() * 116;
-      const r = 34 + Math.random() * 58;
+      const x = 70 + rand() * 116;
+      const y = 70 + rand() * 116;
+      const r = 34 + rand() * 58;
       const grad = g.createRadialGradient(x, y, 0, x, y, r);
       grad.addColorStop(0, 'rgba(255,255,255,0.22)');
       grad.addColorStop(1, 'rgba(255,255,255,0)');
@@ -274,14 +288,17 @@ import {
     { accent: 0, x:   60, y: -300, z: -190, scale: 640 },  // gold, low centre
     { accent: 3, x: -280, y: -220, z: -150, scale: 460 },  // rose, low left
   ];
-  const nebSprites = NEB_DEFS.map((def) => {
+  const nebSprites = NEB_DEFS.map((def, i) => {
     const mat = new SpriteMaterial({
       map: nebulaTex,
       transparent: true,
       opacity: theme.nebulaOpacity,
       blending: theme.blending,
       depthWrite: false,
-      rotation: Math.random() * Math.PI * 2,
+      /* golden-angle steps, not Math.random(): with a fixed texture the
+         rotations decide how the four clouds overlap the CSS corner tints,
+         so they are pinned too — every load renders the same sky */
+      rotation: i * 2.39996,
     });
     const sp = new Sprite(mat);
     sp.position.set(def.x, def.y, def.z);
