@@ -8,6 +8,7 @@ import { ClientRouter } from 'astro:transitions';
 import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
 import BackToTop from '../components/BackToTop.astro';
+import PaletteLab from '../components/PaletteLab.astro';
 import { site, analytics } from '../data/site.js';
 import { pageGraph } from '../data/schema.js';
 import '../styles/style.css';
@@ -222,5 +223,10 @@ const graph = pageGraph({ page, title, description, canonical, nodes: schema });
       re-initialises on astro:page-load, since the client-side router can swap
       into this page without re-running the file. */}
   {page === '404' && <script src="/js/lost.js" is:inline></script>}
+  {/* Palette Lab: dev server only. import.meta.env.DEV is false in a build, so
+      the component never renders — and its style/script are is:inline, so
+      nothing of it is hoisted into the bundle either. Verified by grepping
+      dist/ for "hqm-palette-lab" after a build. */}
+  {import.meta.env.DEV && <PaletteLab />}
 </body>
 </html>

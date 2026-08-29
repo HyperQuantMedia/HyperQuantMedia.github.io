@@ -1,0 +1,1290 @@
+---
+/*
+  PaletteLab — DEV-ONLY palette and theme experiment harness.
+
+  Rendered from Base.astro behind `import.meta.env.DEV`, so it never reaches a
+  production build. Both the <style> and the <script> below are `is:inline`
+  ON PURPOSE: Astro hoists and bundles non-inline component scripts based on
+  what is IMPORTED rather than what is RENDERED, so a bundled script could ship
+  even though the branch that renders it is false. `is:inline` is emitted
+  verbatim at the point of render and therefore cannot ship at all.
+  Verify with: npm run build && grep -r "hqm-palette-lab" dist/   (expect zero)
+
+  What it is for: trying the palette directions from
+  Design/audits/palette-typography-audit.md against the real site, in both
+  themes, with live contrast maths — then copying a report back out.
+
+  The panel deliberately uses hard-coded colours and its own font stack. It must
+  stay readable while you are actively breaking the site's tokens, so it cannot
+  consume them.
+*/
+---
+
+<div id="hqm-palette-lab" data-open="false" aria-live="polite" transition:persist>
+  <button id="hqm-pl-fab" type="button" title="Palette Lab (Alt+P)">◑</button>
+  <div id="hqm-pl-panel" role="dialog" aria-label="Palette Lab">
+    <header>
+      <strong>Palette Lab</strong>
+      <span class="hqm-pl-dev">dev only</span>
+      <button id="hqm-pl-close" type="button" title="Close (Alt+P)">×</button>
+    </header>
+
+    <div class="hqm-pl-body">
+      <section class="hqm-pl-slots">
+        <div class="hqm-pl-row hqm-pl-slotrow">
+          <div class="hqm-pl-seg" id="hqm-pl-slot"></div>
+          <button type="button" id="hqm-pl-swap" title="Next slot (Alt+B)">⇄ next</button>
+        </div>
+        <p id="hqm-pl-slotnote" class="hqm-pl-note"></p>
+        <div class="hqm-pl-row">
+          <span class="hqm-pl-lbl">Theme</span>
+          <div class="hqm-pl-seg" id="hqm-pl-theme">
+            <button type="button" data-theme="dark">dark</button>
+            <button type="button" data-theme="light">light</button>
+            <button type="button" data-theme="">system</button>
+          </div>
+        </div>
+        <div class="hqm-pl-row">
+          <span class="hqm-pl-lbl">Direction</span>
+          <select id="hqm-pl-dir"></select>
+        </div>
+        <p id="hqm-pl-dirnote" class="hqm-pl-note"></p>
+      </section>
+
+      <details open>
+        <summary>Inks &amp; surfaces <em id="hqm-pl-themetag"></em></summary>
+        <div id="hqm-pl-tokens" class="hqm-pl-tokens"></div>
+      </details>
+
+      <details>
+        <summary>Knobs</summary>
+        <div id="hqm-pl-knobs" class="hqm-pl-knobs"></div>
+      </details>
+
+      <details>
+        <summary>Rule fixes</summary>
+        <div id="hqm-pl-rules" class="hqm-pl-rules"></div>
+      </details>
+
+      <details open>
+        <summary>Type</summary>
+        <div class="hqm-pl-row" style="margin-top:7px">
+          <span class="hqm-pl-lbl">Direction</span>
+          <select id="hqm-pl-tdir"></select>
+        </div>
+        <p id="hqm-pl-tdirnote" class="hqm-pl-note"></p>
+        <div id="hqm-pl-fonts" class="hqm-pl-fonts"></div>
+        <div id="hqm-pl-tknobs" class="hqm-pl-knobs"></div>
+        <div id="hqm-pl-trules" class="hqm-pl-rules"></div>
+        <div class="hqm-pl-row hqm-pl-filter" style="margin-top:9px">
+          <span>smallest rendered text</span>
+          <button type="button" id="hqm-pl-remeasure">re-measure</button>
+        </div>
+        <div id="hqm-pl-typeread" class="hqm-pl-contrast"></div>
+      </details>
+
+      <details open>
+        <summary>Contrast — live, composited</summary>
+        <div class="hqm-pl-row hqm-pl-filter">
+          <label><input type="checkbox" id="hqm-pl-failonly" checked> failures only</label>
+          <span id="hqm-pl-score"></span>
+        </div>
+        <div id="hqm-pl-contrast" class="hqm-pl-contrast"></div>
+        <p class="hqm-pl-note">
+          Grounds are composited, not flat. <b>hero</b> = that ink's own glow over
+          <code>--space</code> — the ground the audit found the light accents were
+          never checked against. <b>card</b> = <code>--card-fill</code> over
+          <code>--space</code>. Thresholds: 4.5 body, 3.0 large/UI.
+        </p>
+      </details>
+    </div>
+
+    <footer>
+      <button type="button" id="hqm-pl-copy" class="hqm-pl-primary">Copy report</button>
+      <button type="button" id="hqm-pl-copycss">Copy CSS</button>
+      <button type="button" id="hqm-pl-hold"
+        title="Press and HOLD to see the unmodified site; release to come back. The fastest way to catch a subtle change.">👁 hold</button>
+      <button type="button" id="hqm-pl-reset">Reset slot</button>
+      <span id="hqm-pl-toast"></span>
+    </footer>
+  </div>
+</div>
+
+<style is:inline>
+  #hqm-palette-lab {
+    --pl-bg: #12131c; --pl-bg2: #1b1d29; --pl-ink: #e8ebf5; --pl-dim: #9aa2bd;
+    --pl-line: #2c3044; --pl-acc: #7cc4ff; --pl-ok: #58c98a; --pl-bad: #ff6b6b;
+    --pl-warn: #ffc04d;
+    /* bottom-LEFT on purpose: .to-top is fixed at right:24 bottom:24, and two
+       round buttons stacked in the same corner read as one broken control */
+    position: fixed; inset: auto auto 12px 12px; z-index: 2147483000;
+    font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    color: var(--pl-ink); color-scheme: dark;
+  }
+  #hqm-palette-lab *, #hqm-palette-lab *::before { box-sizing: border-box; }
+  #hqm-pl-fab {
+    width: 38px; height: 38px; border-radius: 50%; cursor: pointer;
+    background: var(--pl-bg); color: var(--pl-ink);
+    border: 1px solid var(--pl-line); box-shadow: 0 6px 22px rgba(0,0,0,.55);
+    font-size: 17px; line-height: 1; display: grid; place-items: center;
+  }
+  #hqm-pl-fab:hover { border-color: var(--pl-acc); }
+  #hqm-pl-panel {
+    display: none; width: min(420px, calc(100vw - 24px));
+    max-height: min(82vh, 780px); overflow: auto; overscroll-behavior: contain;
+    background: var(--pl-bg); border: 1px solid var(--pl-line); border-radius: 10px;
+    box-shadow: 0 18px 48px rgba(0,0,0,.66);
+  }
+  #hqm-palette-lab[data-open="true"] #hqm-pl-panel { display: block; }
+  #hqm-palette-lab[data-open="true"] #hqm-pl-fab { display: none; }
+  #hqm-pl-panel header {
+    position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 8px;
+    padding: 9px 11px; background: var(--pl-bg2); border-bottom: 1px solid var(--pl-line);
+  }
+  #hqm-pl-panel header strong { font-size: 12.5px; letter-spacing: .04em; }
+  .hqm-pl-dev {
+    font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase;
+    color: #12131c; background: var(--pl-warn); padding: 1px 5px; border-radius: 3px;
+  }
+  #hqm-pl-close { margin-left: auto; }
+  #hqm-pl-panel button, #hqm-pl-panel select {
+    font: inherit; background: var(--pl-bg2); color: var(--pl-ink);
+    border: 1px solid var(--pl-line); border-radius: 5px; padding: 3px 8px; cursor: pointer;
+  }
+  #hqm-pl-panel button:hover, #hqm-pl-panel select:hover { border-color: var(--pl-acc); }
+  #hqm-pl-panel button:focus-visible, #hqm-pl-panel select:focus-visible,
+  #hqm-pl-panel input:focus-visible {
+    outline: 2px solid var(--pl-acc); outline-offset: 2px;
+  }
+  #hqm-pl-panel .hqm-pl-primary { background: var(--pl-acc); color: #08111c; border-color: var(--pl-acc); font-weight: 700; }
+  .hqm-pl-body { padding: 10px 11px 4px; }
+  .hqm-pl-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; flex-wrap: wrap; }
+  .hqm-pl-lbl { color: var(--pl-dim); min-width: 58px; }
+  .hqm-pl-seg { display: inline-flex; border: 1px solid var(--pl-line); border-radius: 5px; overflow: hidden; }
+  .hqm-pl-seg button { border: 0; border-radius: 0; padding: 3px 10px; background: transparent; }
+  .hqm-pl-seg button.on { background: var(--pl-acc); color: #08111c; font-weight: 700; }
+  #hqm-pl-dir, #hqm-pl-tdir { flex: 1; min-width: 180px; }
+  .hqm-pl-slotrow { gap: 6px; }
+  #hqm-pl-slot { flex-wrap: wrap; }
+  #hqm-pl-slot button { padding: 3px 7px; font-size: 11px; }
+  #hqm-pl-panel[data-locked="true"] .hqm-pl-body :is(input, select, button):disabled {
+    opacity: .45; cursor: not-allowed;
+  }
+  #hqm-pl-panel[data-locked="true"] #hqm-pl-slotnote { border-left: 2px solid var(--pl-warn); padding-left: 7px; }
+  .hqm-pl-look { color: var(--pl-acc); display: block; margin-top: 4px; }
+  #hqm-pl-hold:active { background: var(--pl-warn); color: #12131c; }
+  .hqm-pl-note { color: var(--pl-dim); font-size: 11px; margin: 5px 0 0; }
+  .hqm-pl-note code { color: var(--pl-ink); }
+  #hqm-pl-panel details { border-top: 1px solid var(--pl-line); padding: 7px 0; }
+  #hqm-pl-panel summary { cursor: pointer; letter-spacing: .04em; color: var(--pl-ink); }
+  #hqm-pl-panel summary em { color: var(--pl-dim); font-style: normal; font-size: 11px; }
+  .hqm-pl-tokens { display: grid; grid-template-columns: 1fr; gap: 3px; margin-top: 7px; }
+  .hqm-pl-tok { display: grid; grid-template-columns: 26px 1fr auto auto; align-items: center; gap: 7px; }
+  .hqm-pl-tok input[type="color"] {
+    width: 26px; height: 22px; padding: 0; border: 1px solid var(--pl-line);
+    border-radius: 4px; background: none; cursor: pointer;
+  }
+  .hqm-pl-tok code { color: var(--pl-dim); font-size: 11px; }
+  .hqm-pl-tok .hqm-pl-val { color: var(--pl-ink); font-size: 11px; }
+  .hqm-pl-tok[data-moved="true"] code { color: var(--pl-warn); }
+  .hqm-pl-tok button { padding: 1px 5px; font-size: 10px; }
+  .hqm-pl-knobs label, .hqm-pl-rules label { display: flex; align-items: center; gap: 7px; margin-top: 6px; }
+  .hqm-pl-knobs span:first-child { min-width: 118px; color: var(--pl-dim); font-size: 11px; }
+  .hqm-pl-knobs input[type="range"] { flex: 1; accent-color: var(--pl-acc); }
+  .hqm-pl-knobs output { min-width: 34px; text-align: right; }
+  .hqm-pl-rules label { font-size: 11.5px; }
+  .hqm-pl-font { display: grid; grid-template-columns: 108px 1fr; align-items: center; gap: 7px; margin-top: 6px; }
+  .hqm-pl-font code { color: var(--pl-dim); font-size: 11px; }
+  .hqm-pl-font.moved code { color: var(--pl-warn); }
+  .hqm-pl-font select { width: 100%; }
+  .hqm-pl-rules input { accent-color: var(--pl-acc); }
+  .hqm-pl-filter { justify-content: space-between; margin-top: 7px; font-size: 11px; }
+  .hqm-pl-filter label { display: flex; align-items: center; gap: 5px; color: var(--pl-dim); }
+  .hqm-pl-contrast { max-height: 260px; overflow: auto; margin-top: 5px; }
+  .hqm-pl-contrast table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  .hqm-pl-contrast th { text-align: right; color: var(--pl-dim); font-weight: 400; padding: 2px 4px; position: sticky; top: 0; background: var(--pl-bg); }
+  .hqm-pl-contrast th:first-child { text-align: left; }
+  .hqm-pl-contrast td { padding: 2px 4px; text-align: right; border-top: 1px solid var(--pl-line); }
+  .hqm-pl-contrast td:first-child { text-align: left; color: var(--pl-ink); }
+  .hqm-pl-contrast .pass { color: var(--pl-ok); }
+  .hqm-pl-contrast .near { color: var(--pl-warn); }
+  .hqm-pl-contrast .fail { color: var(--pl-bad); font-weight: 700; }
+  #hqm-pl-score .pass { color: var(--pl-ok); }
+  #hqm-pl-score .fail { color: var(--pl-bad); }
+  #hqm-pl-panel footer {
+    position: sticky; bottom: 0; display: flex; align-items: center; gap: 7px;
+    padding: 9px 11px; background: var(--pl-bg2); border-top: 1px solid var(--pl-line);
+  }
+  #hqm-pl-toast { color: var(--pl-ok); font-size: 11px; margin-left: auto; }
+  @media (prefers-reduced-motion: no-preference) {
+    #hqm-pl-toast { transition: opacity .2s; }
+  }
+</style>
+
+<script is:inline>
+(() => {
+  'use strict';
+  /* The wrapper carries transition:persist, so the panel survives a
+     client-side navigation — but ClientRouter may re-execute this script
+     against those same persisted nodes. Bind once or every nav adds another
+     listener to every control. */
+  if (window.__hqmPaletteLab) return;
+  window.__hqmPaletteLab = true;
+  /* v2: slot seeds now carry their own token/extra payloads (C's paper sky).
+     State saved under the old key would merge its EMPTY token maps over the new
+     seeds and silently erase them — version the key instead of migrating. */
+  const KEY = 'hqm-palette-lab-v2';
+
+  /* ── Baselines, transcribed from src/styles/style.css ── */
+  const BASE = {
+    dark: {
+      '--space': '#07071a', '--panel': '#11122e', '--panel-2': '#181a3c',
+      '--star': '#eef1ff', '--star-dim': '#aab4d8', '--star-faint': '#767ea6',
+      '--polaris': '#ffce6e', '--polaris-bright': '#ffd98a', '--nebula': '#57e1c4',
+      '--aurora': '#a98bff', '--rose': '#f472b6', '--stellar': '#b8d3ff',
+      '--comet': '#6aa6ff', '--ember': '#ff9166', '--warn': '#ff5f52'
+    },
+    light: {
+      '--space': '#f6f7fb', '--panel': '#ffffff', '--panel-2': '#f5f7fd',
+      '--star': '#0c0e1a', '--star-dim': '#3b4160', '--star-faint': '#5c6282',
+      '--polaris': '#8a5a00', '--polaris-bright': '#6d4700', '--nebula': '#0b7a66',
+      '--aurora': '#5b3bd6', '--rose': '#b02a72', '--stellar': '#2d5296',
+      '--comet': '#14509f', '--ember': '#9c3d13', '--warn': '#c02a1d'
+    }
+  };
+  const SURFACES = ['--space', '--panel', '--panel-2'];
+  const INKS = ['--star', '--star-dim', '--star-faint', '--polaris', '--polaris-bright',
+                '--nebula', '--aurora', '--rose', '--stellar', '--comet', '--ember', '--warn'];
+  /* alpha pairs used to re-derive -dim / -glow when an accent hex moves */
+  const ACCENT_ALPHAS = {
+    dark:  { dim: 0.12, glow: 0.30 },
+    light: { dim: 0.10, glow: 0.24 }
+  };
+  const ACCENTS = ['--polaris', '--nebula', '--aurora', '--rose', '--stellar', '--comet', '--ember'];
+
+  const KNOB_BASE = {
+    glowDark: 0.16, glowLight: 0.16,
+    cardDark: 0.70, cardLight: 0.82,
+    /* veil alphas track the 2026-08-29 band retune in style.css */
+    veilDark: 0.80, veilLight: 0.78,
+    serviceNumDark: 0.35, serviceNumLight: 0.35
+  };
+  const KNOB_META = [
+    ['glowDark',       'hero glow · dark',   0, 0.4,  0.01],
+    ['glowLight',      'hero glow · light',  0, 0.4,  0.01],
+    ['cardDark',       'card fill · dark',   0.4, 1,  0.01],
+    ['cardLight',      'card fill · light',  0.4, 1,  0.01],
+    ['veilDark',       'veil · dark',        0.4, 1,  0.01],
+    ['veilLight',      'veil · light',       0.4, 1,  0.01],
+    ['serviceNumDark', 'service № · dark',   0.1, 1,  0.05],
+    ['serviceNumLight','service № · light',  0.1, 1,  0.05]
+  ];
+  const RULE_META = [
+    ['focus',        'Focus ring → 2px solid gold (kills Bootstrap blue)'],
+    ['tagPending',   'tag-pending: drop the scrim, label → --star-dim'],
+    ['searchSize',   'Compendium search → 16px (no iOS zoom)'],
+    ['navSubShadow', 'nav-sub shadow → var(--shadow-hard)'],
+    ['aliases',      'Semantic aliases (--link/--focus-ring/--label-ink/--ok)'],
+    ['corona',       'Hero glow → corona annulus (clean centre)'],
+    ['labelsStellar','Section labels gold → --stellar']
+  ];
+
+  /* ── Type ──
+     Every family below is ALREADY vendored in public/vendor/fonts, so nothing
+     here adds a network request. Space Mono ships 400/700 only (no 500, no
+     800) — that is why T2b costs the lockup its weight. */
+  const F = {
+    inter:   "'Inter', system-ui, sans-serif",
+    grotesk: "'Space Grotesk', 'Inter', sans-serif",
+    spmono:  "'Space Mono', 'SFMono-Regular', monospace",
+    jbmono:  "'JetBrains Mono', 'Space Mono', 'SFMono-Regular', monospace",
+    sysmono: "ui-monospace, SFMono-Regular, Menlo, monospace",
+    sys:     "system-ui, sans-serif",
+    /* researched candidates (2026: Inter #1 in the wild; Geist + Geist Mono the
+       fastest risers; Bricolage the most-installed new sans of 24 months;
+       Hanken/Jakarta the body workhorses). NOT vendored — the lab loads them
+       from Google Fonts AT DEV TIME ONLY. Shipping one means adding it to
+       tools/vendor-fonts.mjs and re-running npm run vendor. */
+    bricolage: "'Bricolage Grotesque', 'Space Grotesk', 'Inter', sans-serif",
+    jakarta:   "'Plus Jakarta Sans', 'Inter', system-ui, sans-serif",
+    hanken:    "'Hanken Grotesk', 'Inter', system-ui, sans-serif",
+    instrument:"'Instrument Sans', 'Inter', system-ui, sans-serif",
+    manrope:   "'Manrope', 'Inter', system-ui, sans-serif",
+    sora:      "'Sora', 'Space Grotesk', sans-serif",
+    outfit:    "'Outfit', 'Space Grotesk', sans-serif",
+    geist:     "'Geist', 'Inter', system-ui, sans-serif",
+    geistmono: "'Geist Mono', 'JetBrains Mono', monospace",
+    plexmono:  "'IBM Plex Mono', 'Space Mono', monospace",
+    fira:      "'Fira Code', 'JetBrains Mono', monospace"
+  };
+  /* Google Fonts loader table: family name (as it appears quoted in the stack)
+     -> css2 query fragment. Vendored families are absent on purpose. */
+  const GF = {
+    'Bricolage Grotesque': 'Bricolage+Grotesque:wght@400;500;600;700',
+    'Plus Jakarta Sans':   'Plus+Jakarta+Sans:wght@400;500;600;700',
+    'Hanken Grotesk':      'Hanken+Grotesk:wght@400;500;600;700',
+    'Instrument Sans':     'Instrument+Sans:wght@400;500;600;700',
+    'Manrope':             'Manrope:wght@400;500;600;700',
+    'Sora':                'Sora:wght@400;600;700',
+    'Outfit':              'Outfit:wght@400;500;600;700',
+    'Geist':               'Geist:wght@400;500;600;700',
+    'Geist Mono':          'Geist+Mono:wght@400;500;700',
+    'IBM Plex Mono':       'IBM+Plex+Mono:wght@400;500;700',
+    'Fira Code':           'Fira+Code:wght@400;500;700'
+  };
+  const FONT_CHOICES = {
+    '--font-body': [
+      ['Inter (current)', F.inter], ['Space Grotesk', F.grotesk], ['system', F.sys],
+      ['Plus Jakarta Sans (web)', F.jakarta], ['Hanken Grotesk (web)', F.hanken],
+      ['Instrument Sans (web)', F.instrument], ['Manrope (web)', F.manrope], ['Geist (web)', F.geist]
+    ],
+    '--font-display': [
+      ['Space Grotesk (current)', F.grotesk], ['Inter', F.inter], ['JetBrains Mono', F.jbmono],
+      ['Bricolage Grotesque (web)', F.bricolage], ['Sora (web)', F.sora],
+      ['Outfit (web)', F.outfit], ['Geist (web)', F.geist]
+    ],
+    '--font-mono': [
+      ['Space Mono (current)', F.spmono], ['JetBrains Mono — T2a', F.jbmono], ['system mono', F.sysmono],
+      ['Geist Mono (web)', F.geistmono], ['IBM Plex Mono (web)', F.plexmono], ['Fira Code (web)', F.fira]
+    ],
+    '--font-brand': [
+      ['JetBrains Mono (current)', F.jbmono], ['Space Mono — T2b', F.spmono],
+      ['Geist Mono (web)', F.geistmono]
+    ]
+  };
+  const FONT_BASE = {
+    '--font-body': F.inter, '--font-display': F.grotesk,
+    '--font-mono': F.spmono, '--font-brand': F.jbmono
+  };
+  const TKNOB_BASE = { floor: 0, rootScale: 1, bodyLH: 0, tracking: 0 };
+  const TKNOB_META = [
+    ['floor',     'content floor (px)', 0, 16, 1],
+    ['rootScale', 'root scale',      0.9, 1.2, 0.01],
+    ['bodyLH',    'body line-height',  0, 2.1, 0.05],
+    ['tracking',  'caps tracking cap (em)', 0, 0.24, 0.01]
+  ];
+  const TRULE_META = [
+    ['unitalic',   'belief-quote: drop the synthesised italic'],
+    ['searchInput','Compendium search → 16px (same as the palette-side toggle)']
+  ];
+  const TYPE_DIRECTIONS = {
+    current: {
+      label: 'Current — 51 distinct sizes',
+      note: 'As shipped. The micro layer sits at 9.6–10.9px in the weakest ink.',
+      fonts: {}, knobs: {}, rules: {}
+    },
+    T1: {
+      label: 'T1 — floor the micro layer',
+      note: 'The audit\'s T1 is a 42→9 size remap, which needs per-rule design calls a lab cannot guess. What IS testable here is the part TYP-02 actually measures: the content floor and the tracking cap. Sizes above the floor are left alone.',
+      fonts: {}, knobs: { floor: 12, tracking: 0.14 }, rules: { unitalic: 1, searchInput: 1 }
+    },
+    T2a: {
+      label: 'T2a — JetBrains Mono everywhere (recommended)',
+      note: 'Swaps --font-mono (52 rules) to the face the brand lockup already uses. Bigger x-height at the same px, real 500 weight, and two Space Mono files stop being needed. Keeps "the wordmark is set in JetBrains Mono" true.',
+      fonts: { '--font-mono': F.jbmono }, knobs: { floor: 12, tracking: 0.14 },
+      rules: { unitalic: 1, searchInput: 1 }
+    },
+    T2b: {
+      label: 'T2b — Space Mono everywhere',
+      note: 'Moves the BRAND face to Space Mono. Space Mono has no 800 weight, so the lockup gets visibly lighter, and this contradicts the recorded brand decision that the wordmark is set in JetBrains Mono. Do not pick this without the brand owner in the room.',
+      fonts: { '--font-brand': F.spmono }, knobs: { floor: 12, tracking: 0.14 },
+      rules: { unitalic: 1, searchInput: 1 }
+    },
+    T3: {
+      label: 'T3 — Grotesk refresh (researched, web-loaded)',
+      note: 'Bricolage Grotesque for display (the most-installed new sans of the last two years — characterful where Space Grotesk is quirky) over Hanken Grotesk body (the current body workhorse pick). Loaded from Google Fonts in dev; shipping means vendoring both.',
+      fonts: { '--font-display': F.bricolage, '--font-body': F.hanken },
+      knobs: { floor: 12, tracking: 0.14 }, rules: { unitalic: 1, searchInput: 1 }
+    },
+    T4: {
+      label: 'T4 — Geist suite (researched, web-loaded)',
+      note: 'One voice, Vercel-style: Geist for body and display, Geist Mono for every mono job including the brand. Geist Mono is the fastest-rising mono in the wild. The most "big-tech 2026" of the options — and the furthest from the retro-NASA identity.',
+      fonts: { '--font-body': F.geist, '--font-display': F.geist,
+               '--font-mono': F.geistmono, '--font-brand': F.geistmono },
+      knobs: { floor: 12, tracking: 0.14 }, rules: { unitalic: 1, searchInput: 1 }
+    }
+  };
+
+  /* ── Directions, from Design/audits/palette-typography-audit.md §4 ── */
+  const DIRECTIONS = {
+    current: {
+      label: 'Current — baseline (no overrides)',
+      note: 'The palette as it ships today. Everything measured red below is a real, live failure.',
+      tokens: { dark: {}, light: {} }, knobs: {}, rules: {}
+    },
+    A: {
+      label: 'A — Trim the wick (surgical)',
+      note: 'Two dark values, three light inks, four one-line rules. ~12 lines, no markup change. Clears every measured AA failure; changes nothing else.',
+      tokens: { dark: { '--star-faint': '#858db5' },
+                light: { '--polaris': '#7a4f00', '--nebula': '#0a6455' } },
+      knobs: { serviceNumDark: 0.6, serviceNumLight: 0.8 },
+      rules: { focus: 1, tagPending: 1, searchSize: 1, navSubShadow: 1 }
+    },
+    B: {
+      label: 'B — Re-derive the light sky (retune)',
+      note: 'A, plus: light gold one step deeper for headroom, hero glow halved in light so it tints instead of shading, translucency bounded so the starfield cannot eat text, semantic aliases.',
+      tokens: { dark: { '--star-faint': '#858db5' },
+                light: { '--polaris': '#6f4800', '--nebula': '#0a6455' } },
+      knobs: { glowLight: 0.08, cardDark: 0.92, cardLight: 0.92, veilDark: 0.85, veilLight: 0.85,
+               serviceNumDark: 0.6, serviceNumLight: 0.8 },
+      rules: { focus: 1, tagPending: 1, searchSize: 1, navSubShadow: 1, aliases: 1 }
+    },
+    C: {
+      label: 'C — Two skies, one constellation (re-articulation)',
+      note: 'B, plus the corona glow (fixes the mechanism rather than tuning around it) and labels moved gold → stellar so gold means interaction only. NOTE: the dual-rung accent system and the status-shape work are structural and are NOT simulated here.',
+      tokens: { dark: { '--star-faint': '#858db5' },
+                light: { '--polaris': '#6f4800', '--nebula': '#0a6455' } },
+      knobs: { glowLight: 0.08, cardDark: 0.92, cardLight: 0.92, veilDark: 0.85, veilLight: 0.85,
+               serviceNumDark: 0.6, serviceNumLight: 0.8 },
+      rules: { focus: 1, tagPending: 1, searchSize: 1, navSubShadow: 1, aliases: 1,
+               corona: 1, labelsStellar: 1 }
+    }
+  };
+
+  /* ── Colour maths ── */
+  const hex2rgb = h => {
+    h = h.trim().replace('#', '');
+    if (h.length === 3) h = h.split('').map(c => c + c).join('');
+    return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+  };
+  const rgb2hex = r => '#' + r.map(v => Math.round(v).toString(16).padStart(2,'0')).join('');
+  const lin = c => { c /= 255; return c <= 0.04045 ? c/12.92 : Math.pow((c+0.055)/1.055, 2.4); };
+  const lum = ([r,g,b]) => 0.2126*lin(r) + 0.7152*lin(g) + 0.0722*lin(b);
+  const ratio = (a, b) => {
+    const [x, y] = [lum(a), lum(b)].sort((p,q) => q - p);
+    return (x + 0.05) / (y + 0.05);
+  };
+  const over = (fg, bg, alpha) => fg.map((c,i) => c*alpha + bg[i]*(1-alpha));
+  const rgba = (hex, a) => { const [r,g,b] = hex2rgb(hex); return `rgba(${r}, ${g}, ${b}, ${a})`; };
+
+  /* ── Slots ──
+     Seeded from the audit's combination matrix, so switching slots shows a real
+     difference immediately. Slot 0 is the live palette and is LOCKED: a
+     comparison needs an unedited control, and the quickest way to lose one is to
+     tweak it by accident and forget. */
+  const SLOT_SEEDS = [
+    { short: 'Current', name: 'Current — as shipped', locked: true,
+      note: 'The live palette and type, unmodified. The control you compare everything against — locked so it stays one.',
+      dir: 'current', tdir: 'current' },
+    { short: 'A×T1', name: 'A × T1 — the compliance package',
+      note: 'Surgical colour fix plus the content floor. Every measured AA failure closed, essentially zero identity movement BY DESIGN — "look unchanged" is this direction\'s whole point. ~1.5 days.',
+      look: 'Tab around: the focus ring goes gold (was near-invisible blue). /credits: the PENDING platform tags. /compendium: tags rise to 12px. Light heroes: gold labels one step deeper.',
+      dir: 'A', tdir: 'T1' },
+    { short: 'B×T1', name: 'B × T1 — the engineer\'s choice',
+      note: 'Inks verified against composited grounds as policy, bounded translucency, semantic aliases, real type floor. ~3 days. Durable: future pages cannot silently fail.',
+      look: 'Dark: cards and section bands go calmer — fill 0.70→0.92, stars stop bleeding through text (clearest on /cosmos cards). Light: the hero glow halves, the "brown stain" behind hero labels goes. Plus everything in A.',
+      dir: 'B', tdir: 'T1' },
+    { short: 'B×T2a✦', name: 'B × T2a + corona — the audit\'s pick', recommended: true,
+      note: 'Best value in the matrix, with C\'s corona glow cherry-picked in: independently the cleanest fix for the hero-glow mechanism, and it costs one gradient. ~4 days.',
+      look: 'Every mono-set text (labels, tags, nav, stats) switches to JetBrains — compare a label\'s zeros and lowercase l. Page heroes: the glow becomes a ring with a clean centre. Plus B×T1\'s calmer cards.',
+      dir: 'B', tdir: 'T2a', rules: { corona: 1 } },
+    { short: 'C×T2a', name: 'C × T2a — the flagship',
+      note: 'Light becomes a designed "day chart" rather than an inversion, gold means one thing, one mono voice. ~1.5–2 weeks. The paper-sky values here are a lab extrapolation of C\'s stated premise — verify them in the live table below; the audit did not pre-verify these three.',
+      look: 'SWITCH TO LIGHT — the sky becomes warm astronomer\'s paper instead of grey-blue; unmistakable. Section labels go starlight-blue instead of gold. Dark: same as B on purpose — the audit says dark is already right, don\'t touch it.',
+      dir: 'C', tdir: 'T2a',
+      tokens: { light: { '--space': '#f2efe9', '--panel': '#fdfcf8', '--panel-2': '#f5f1e8' } },
+      extraCSS: [
+        '@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) {',
+        '  --void: #eae5da; --space-2: #ece7dc; --nav-scrim: #f2efe9;',
+        '  --hero-scrim: rgba(242, 239, 233, 0.55); --veil: rgba(242, 239, 233, 0.85);',
+        '  --veil-deep: rgba(236, 231, 221, 0.88); --logo-plate: #fdfcf8;',
+        '} }',
+        ':root[data-theme="light"] {',
+        '  --void: #eae5da; --space-2: #ece7dc; --nav-scrim: #f2efe9;',
+        '  --hero-scrim: rgba(242, 239, 233, 0.55); --veil: rgba(242, 239, 233, 0.85);',
+        '  --veil-deep: rgba(236, 231, 221, 0.88); --logo-plate: #fdfcf8;',
+        '}'
+      ].join('\n') },
+
+    /* ── Explorations — researched re-articulations, NOT from the audit ──
+       Grounded in what the most-visited sites actually do (2026): NEUTRAL
+       ground ramps (GitHub #0d1117, Material/Spotify #121212, Netflix #141414,
+       Discord #1e1f22, Steam blue-slate) carrying MULTIPLE distinct saturated
+       accents, each owning a semantic job. Depth comes from layered elevation
+       and a jewel accent constellation — never from tinting everything toward
+       one hue. Sources + workings: Design/audits/web-palette-type-research.md.
+       The starfield canvas keeps its shipped hues (scene.js literals). */
+    { short: 'DeepSpace', name: 'Deep Space \u2014 Primer-grade neutral (researched)',
+      note: 'GitHub Primer\u2019s discipline mapped onto HQM: true-neutral ground ramp (#0d1117 class), gold STAYS gold, and every accent keeps its own hue at full saturation \u2014 blue, emerald, violet, coral, rose all distinct. Light is Primer\u2019s white/#f6f8fa with their deepened accent inks.',
+      look: 'Both themes: the blue cast is gone \u2014 grounds go true neutral, and each accent reads as ITS colour instead of a tint of the theme. Compare the Cosmos tool cards: seven tools, seven genuinely different hues.',
+      dir: 'current', tdir: 'current', knobs: { glowLight: 0.08 },
+      tokens: {
+        dark: { '--space': '#0d1117', '--panel': '#161b22', '--panel-2': '#21262d',
+                '--star': '#eef2f7', '--star-dim': '#a9b4c4', '--star-faint': '#8d99ac',
+                '--polaris': '#ffd06e', '--polaris-bright': '#ffe092', '--nebula': '#45d4a1',
+                '--aurora': '#b18aff', '--rose': '#ff7bb0', '--stellar': '#9ecbff',
+                '--comet': '#6cb2ff', '--ember': '#ffa657', '--warn': '#ff7b72' },
+        /* Primer's 700-tier light inks, not the 600s: their 600s are tuned for
+           white and fall to ~4.3 on panel-2/hero under this lab's stricter
+           4.5-on-every-ground policy — measured here, not assumed. */
+        light: { '--space': '#f6f8fa', '--panel': '#ffffff', '--panel-2': '#eaeef2',
+                 '--star': '#1f2328', '--star-dim': '#424a53', '--star-faint': '#57606a',
+                 '--polaris': '#7d4e00', '--polaris-bright': '#633c01', '--nebula': '#116329',
+                 '--aurora': '#6639ba', '--rose': '#99286e', '--stellar': '#0550ae',
+                 '--comet': '#033d8b', '--ember': '#953800', '--warn': '#a40e26' }
+      },
+      extraCSS: [
+        ':root { --void: #010409; --space-2: #11151c; }',
+        '@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) {',
+        '  --void: #eef1f5; --space-2: #f0f3f6; } }',
+        ':root[data-theme="light"] { --void: #eef1f5; --space-2: #f0f3f6; }'
+      ].join('\n') },
+    { short: 'Jewel', name: 'Jewel Nebula \u2014 rich accents on ink (researched)',
+      note: 'The 2026 jewel-tone direction on a Radix-style neutral ramp: charcoal-ink grounds with barely 3% violet, then emerald, sapphire, amethyst, ruby, gold and copper each at full depth. Light is gallery ivory with deep jewel inks. Richness from the accents, never from a cast.',
+      look: 'Dark: the ground goes ink-neutral and the accents jump \u2014 emerald chips, sapphire links, amethyst spotlights, ruby warns. Light: warm ivory instead of blue-white, jewel-deep inks.',
+      dir: 'current', tdir: 'current', knobs: { glowLight: 0.08 },
+      tokens: {
+        dark: { '--space': '#0e0e13', '--panel': '#17171f', '--panel-2': '#20202b',
+                '--star': '#f0f0f5', '--star-dim': '#b3b5c6', '--star-faint': '#9093a9',
+                '--polaris': '#ffcf6e', '--polaris-bright': '#ffdf94', '--nebula': '#3fd9a4',
+                '--aurora': '#b18aff', '--rose': '#ff7fa5', '--stellar': '#8fbcff',
+                '--comet': '#6aabff', '--ember': '#ff9e64', '--warn': '#ff6b5e' },
+        light: { '--space': '#faf9f7', '--panel': '#ffffff', '--panel-2': '#f1efec',
+                 '--star': '#17151f', '--star-dim': '#45414f', '--star-faint': '#5f5b6b',
+                 '--polaris': '#7a4f00', '--polaris-bright': '#634000', '--nebula': '#056b4f',
+                 '--aurora': '#6626c9', '--rose': '#ad1a5f', '--stellar': '#1a56c4',
+                 '--comet': '#0f4bb0', '--ember': '#9a4200', '--warn': '#b3271b' }
+      },
+      extraCSS: [
+        ':root { --void: #09090d; --space-2: #131318; }',
+        '@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) {',
+        '  --void: #f2f0ed; --space-2: #f6f5f2; } }',
+        ':root[data-theme="light"] { --void: #f2f0ed; --space-2: #f6f5f2; }'
+      ].join('\n') },
+    { short: 'Arcade', name: 'Arcade \u2014 gaming-platform slate (researched)',
+      note: 'The Steam/Discord/Twitch synthesis: blue-slate neutral grounds (#171a21 family), electric multi-hue accents \u2014 Steam blue, Twitch violet, mint, coral \u2014 with HQM\u2019s gold kept as the north star. The closest of the three to how the big gaming platforms actually read.',
+      look: 'Dark: slate grounds a step warmer than shipped, Steam-blue comets, Twitch-violet auroras, everything electric but distinct. Light: cool platform white.',
+      dir: 'current', tdir: 'current', knobs: { glowLight: 0.08 },
+      tokens: {
+        dark: { '--space': '#14171f', '--panel': '#1b2130', '--panel-2': '#232b3e',
+                '--star': '#eaf0f8', '--star-dim': '#aeb9cd', '--star-faint': '#8f9bb1',
+                '--polaris': '#ffd06e', '--polaris-bright': '#ffe092', '--nebula': '#4fe3c1',
+                '--aurora': '#b685ff', '--rose': '#ff7fae', '--stellar': '#8fd0ff',
+                '--comet': '#66c0f4', '--ember': '#ff9166', '--warn': '#ff6b5e' },
+        light: { '--space': '#f2f4f8', '--panel': '#ffffff', '--panel-2': '#e8ecf3',
+                 '--star': '#131721', '--star-dim': '#3e4557', '--star-faint': '#59627a',
+                 '--polaris': '#7a4f00', '--polaris-bright': '#634000', '--nebula': '#0a6b58',
+                 '--aurora': '#6f2dbd', '--rose': '#b02565', '--stellar': '#14609f',
+                 '--comet': '#0f55a5', '--ember': '#9c3d13', '--warn': '#b3271b' }
+      },
+      extraCSS: [
+        ':root { --void: #0e1016; --space-2: #181c26; }',
+        '@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) {',
+        '  --void: #e9edf3; --space-2: #eef1f6; } }',
+        ':root[data-theme="light"] { --void: #e9edf3; --space-2: #eef1f6; }'
+      ].join('\n') }
+  ];
+  const seedSlot = i => {
+    const s = SLOT_SEEDS[i];
+    const st = s.tokens || {};
+    return {
+      dir: s.dir,
+      tokens: { dark: Object.assign({}, st.dark || {}), light: Object.assign({}, st.light || {}) },
+      knobs: Object.assign({}, s.knobs || {}), rules: Object.assign({}, s.rules || {}),
+      tdir: s.tdir, fonts: {}, tknobs: {}, trules: Object.assign({}, s.trules || {}),
+      extra: s.extraCSS || ''
+    };
+  };
+  const blank = () => seedSlot(0);
+
+  let state = { slot: 0, slots: SLOT_SEEDS.map((_, i) => seedSlot(i)) };
+  try {
+    const saved = JSON.parse(localStorage.getItem(KEY) || 'null');
+    if (saved && Array.isArray(saved.slots) && saved.slots.length === SLOT_SEEDS.length) {
+      state = saved;
+      state.slots = state.slots.map((s, i) => Object.assign(seedSlot(i), s));
+      if (typeof state.slot !== 'number') state.slot = 0;
+    }
+    /* anything saved under the old two-slot {A,B} shape is discarded rather than
+       migrated — those slots meant something different */
+  } catch (e) { /* corrupt or blocked storage — start fresh, never throw */ }
+  /* the control must stay the control, whatever a stale payload said */
+  state.slots[0] = seedSlot(0);
+  const isLocked = () => !!SLOT_SEEDS[state.slot].locked;
+  const cur = () => state.slots[state.slot];
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} };
+  function reloadState() {
+    try {
+      const s = JSON.parse(localStorage.getItem(KEY) || 'null');
+      if (s && Array.isArray(s.slots) && s.slots.length === SLOT_SEEDS.length) {
+        state = s;
+        state.slots = state.slots.map((x, i) => Object.assign(seedSlot(i), x));
+        state.slots[0] = seedSlot(0);
+      }
+    } catch (e) {}
+  }
+
+  /* /devview frames every page. A lab button in each of twenty frames is
+     noise, so inside a frame the UI is removed but the OVERRIDES still apply —
+     which is the useful half: tune once in a normal tab and watch the palette
+     land across every device width at once. */
+  const inFrame = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
+
+  /* Effective value for a token = slot override ?? direction value ?? baseline */
+  const dirOf = s => DIRECTIONS[s.dir] || DIRECTIONS.current;
+  const tokenVal = (s, theme, name) =>
+    s.tokens[theme][name] ?? dirOf(s).tokens[theme][name] ?? BASE[theme][name];
+  const knobVal = (s, name) =>
+    s.knobs[name] ?? dirOf(s).knobs[name] ?? KNOB_BASE[name];
+  const ruleOn = (s, name) =>
+    (name in s.rules) ? !!s.rules[name] : !!dirOf(s).rules[name];
+
+  const tdirOf = s => TYPE_DIRECTIONS[s.tdir] || TYPE_DIRECTIONS.current;
+  const fontVal = (s, name) =>
+    s.fonts[name] ?? tdirOf(s).fonts[name] ?? FONT_BASE[name];
+  const tknobVal = (s, name) =>
+    s.tknobs[name] ?? tdirOf(s).knobs[name] ?? TKNOB_BASE[name];
+  const truleOn = (s, name) =>
+    (name in s.trules) ? !!s.trules[name] : !!tdirOf(s).rules[name];
+
+  const themeNow = () => {
+    const attr = document.documentElement.getAttribute('data-theme');
+    if (attr === 'light' || attr === 'dark') return attr;
+    return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  };
+
+  /* ── CSS generation ── */
+  function tokenBlock(s, theme) {
+    const out = [];
+    for (const name of Object.keys(BASE[theme])) {
+      const v = tokenVal(s, theme, name);
+      if (v.toLowerCase() !== BASE[theme][name].toLowerCase()) out.push(`  ${name}: ${v};`);
+      /* an accent that moved must drag its -dim/-glow with it, or the rails and
+         spotlights keep painting the OLD hue behind the new ink */
+      if (ACCENTS.includes(name) && v.toLowerCase() !== BASE[theme][name].toLowerCase()) {
+        const a = ACCENT_ALPHAS[theme];
+        out.push(`  ${name}-dim: ${rgba(v, a.dim)};`);
+        out.push(`  ${name}-glow: ${rgba(v, a.glow)};`);
+      }
+    }
+    /* Surfaces derived from the slot's OWN sky and panel rather than the
+       shipped literals — a re-skied palette must drag its veils, cards and the
+       nav ground with it or the old blue shows through every translucency. */
+    const rgbList = hex => hex2rgb(hex).join(', ');
+    const spaceHex = tokenVal(s, theme, '--space');
+    const panelHex = tokenVal(s, theme, '--panel');
+    const spaceMoved = spaceHex.toLowerCase() !== BASE[theme]['--space'].toLowerCase();
+    const panelMoved = panelHex.toLowerCase() !== BASE[theme]['--panel'].toLowerCase();
+    const card = knobVal(s, theme === 'dark' ? 'cardDark' : 'cardLight');
+    const veil = knobVal(s, theme === 'dark' ? 'veilDark' : 'veilLight');
+    if (card !== KNOB_BASE[theme === 'dark' ? 'cardDark' : 'cardLight'] || panelMoved) {
+      out.push(`  --card-fill: rgba(${rgbList(panelHex)}, ${card});`);
+      out.push(`  --card-fill-hover: rgba(${rgbList(tokenVal(s, theme, '--panel-2'))}, ${Math.min(card + 0.1, 0.98)});`);
+    }
+    if (veil !== KNOB_BASE[theme === 'dark' ? 'veilDark' : 'veilLight'] || spaceMoved) {
+      /* band = translucent PANEL, matching the shipped retune — a space-toned
+         veil composites to the ground's own colour and the band disappears */
+      out.push(`  --veil: rgba(${rgbList(panelHex)}, ${veil});`);
+      out.push(`  --veil-deep: rgba(${rgbList(spaceHex)}, ${Math.min(veil + 0.08, 0.96)});`);
+    }
+    if (spaceMoved) {
+      out.push(`  --nav-scrim: ${spaceHex};`);
+      out.push(`  --hero-scrim: rgba(${rgbList(spaceHex)}, 0.55);`);
+    }
+    if (ruleOn(s, 'aliases')) {
+      out.push(`  --link: var(--polaris);`, `  --link-hover: var(--polaris-bright);`,
+               `  --focus-ring: var(--polaris);`,
+               `  --label-ink: var(${ruleOn(s, 'labelsStellar') ? '--stellar' : '--polaris'});`,
+               `  --ok: var(--nebula);`);
+    }
+    return out.join('\n');
+  }
+
+  function buildCSS(s) {
+    const dark = tokenBlock(s, 'dark'), light = tokenBlock(s, 'light');
+    const css = [];
+    if (dark) css.push(`:root, :root[data-theme="dark"] {\n${dark}\n}`);
+    if (light) css.push(
+      `@media (prefers-color-scheme: light) {\n  :root:not([data-theme="dark"]) {\n${light.replace(/^/gm,'  ')}\n  }\n}`,
+      `:root[data-theme="light"] {\n${light}\n}`
+    );
+
+    const sd = knobVal(s, 'serviceNumDark'), sl = knobVal(s, 'serviceNumLight');
+    if (sd !== KNOB_BASE.serviceNumDark) css.push(`.service-number { opacity: ${sd}; }`);
+    if (sl !== KNOB_BASE.serviceNumLight) css.push(
+      `@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) .service-number { opacity: ${sl}; } }`,
+      `:root[data-theme="light"] .service-number { opacity: ${sl}; }`
+    );
+
+    if (ruleOn(s, 'focus')) css.push(
+      `a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible,` +
+      ` textarea:focus-visible, [tabindex]:focus-visible {\n` +
+      `  outline: 2px solid var(--polaris);\n  outline-offset: 2px;\n}`,
+      `.nav-link:focus, .nav-link:focus-visible, .navbar-toggler:focus {\n` +
+      `  box-shadow: none;\n  --bs-focus-ring-color: transparent;\n}`
+    );
+    if (ruleOn(s, 'tagPending')) css.push(
+      `.tag-pending::after { display: none !important; content: none !important; }`,
+      `.tag-pending { color: var(--star-dim); }`
+    );
+    if (ruleOn(s, 'searchSize')) css.push(`.comp-search { font-size: 1rem; }`);
+    if (ruleOn(s, 'navSubShadow')) css.push(
+      `.nav-sub { box-shadow: 0 18px 40px var(--shadow-hard); }`
+    );
+    /* Only .section-label exists as a class. The audit also names "partner lines"
+       and "year labels", which have no dedicated class today — they cannot be
+       retargeted here without markup work, so this toggle is honestly partial. */
+    if (ruleOn(s, 'labelsStellar')) css.push(
+      `.section-label { color: var(--stellar); }`
+    );
+
+    /* Corona. The shipped glow is a 680px disc, blur(130px), painted in the
+       accent itself — which is exactly what puts an accent's own ink under text
+       set in that accent. An annulus keeps the colour and clears the centre.
+       The blur has to come down too, or it smears the hole shut. */
+    const gd = knobVal(s, 'glowDark'), gl = knobVal(s, 'glowLight');
+    if (ruleOn(s, 'corona')) {
+      css.push(
+        `.page-hero-glow { filter: blur(60px); opacity: ${gd}; }`,
+        ['polaris','nebula','aurora'].map(a =>
+          `.page-hero-glow.${a} { background: radial-gradient(closest-side,` +
+          ` transparent 0 44%, var(--${a}) 72%, transparent 100%); }`).join('\n'),
+        `@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) .page-hero-glow { opacity: ${gl}; } }`,
+        `:root[data-theme="light"] .page-hero-glow { opacity: ${gl}; }`
+      );
+    } else {
+      if (gd !== KNOB_BASE.glowDark) css.push(`.page-hero-glow { opacity: ${gd}; }`);
+      if (gl !== KNOB_BASE.glowLight) css.push(
+        `@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) .page-hero-glow { opacity: ${gl}; } }`,
+        `:root[data-theme="light"] .page-hero-glow { opacity: ${gl}; }`
+      );
+    }
+    /* ── type ── */
+    const fontDecls = Object.keys(FONT_BASE)
+      .filter(n => fontVal(s, n) !== FONT_BASE[n])
+      .map(n => `  ${n}: ${fontVal(s, n)};`);
+    if (fontDecls.length) css.push(`:root {\n${fontDecls.join('\n')}\n}`);
+
+    const rs = tknobVal(s, 'rootScale');
+    if (rs !== TKNOB_BASE.rootScale) css.push(`html { font-size: ${(rs * 100).toFixed(0)}%; }`);
+    const lh = tknobVal(s, 'bodyLH');
+    if (lh) css.push(`body { line-height: ${lh}; }`);
+    const floor = tknobVal(s, 'floor');
+    /* The floor is applied by marking real elements at runtime rather than by
+       guessing selectors: 51 distinct font-size values are spread across rules
+       whose selectors cannot be derived reliably from the stylesheet, and the
+       thing that matters is the COMPUTED size on the page anyway. */
+    if (floor) css.push(`[data-hqm-floor] { font-size: ${floor}px !important; }`);
+    const tr = tknobVal(s, 'tracking');
+    if (tr) css.push(`[data-hqm-track] { letter-spacing: ${tr}em !important; }`);
+    if (truleOn(s, 'unitalic')) css.push(
+      `.belief-quote { font-style: normal; }`
+    );
+    if (truleOn(s, 'searchInput')) css.push(`.comp-search { font-size: 1rem; }`);
+
+    /* slot-level extra CSS: tokens outside the BASE inventory (nav-scrim, veil
+       tints, void) that a seed needs to move as a set — C's paper sky */
+    if (s.extra) css.push(s.extra);
+
+    return css.join('\n\n');
+  }
+
+  /* ── Runtime type pass ──
+     Marks elements whose COMPUTED size is under the floor, or whose uppercase
+     tracking exceeds the cap. Re-run after every change and after navigation. */
+  let typeStats = { floored: 0, tracked: 0, smallest: [] };
+  function typePass() {
+    const s = cur();
+    const floor = tknobVal(s, 'floor');
+    const cap = tknobVal(s, 'tracking');
+    const seen = [];
+    document.querySelectorAll('[data-hqm-floor], [data-hqm-track]').forEach(el => {
+      el.removeAttribute('data-hqm-floor'); el.removeAttribute('data-hqm-track');
+    });
+    let floored = 0, tracked = 0;
+    const lab = document.getElementById('hqm-palette-lab');
+    document.querySelectorAll('body *').forEach(el => {
+      if (lab && lab.contains(el)) return;
+      const text = Array.from(el.childNodes)
+        .filter(n => n.nodeType === 3).map(n => n.textContent.trim()).join('');
+      if (!text) return;
+      /* decorative glyphs are exempt per the audit — a lone ✦ is not content */
+      if (text.length <= 2 && !/[a-z0-9]/i.test(text)) return;
+      const cs = getComputedStyle(el);
+      const fs = parseFloat(cs.fontSize);
+      seen.push({ fs, tag: el.tagName.toLowerCase(), cls: (el.className || '').toString().split(' ')[0], text: text.slice(0, 24) });
+      if (floor && fs < floor) { el.setAttribute('data-hqm-floor', ''); floored++; }
+      if (cap) {
+        const ls = parseFloat(cs.letterSpacing);
+        if (cs.textTransform === 'uppercase' && ls && fs && (ls / fs) > cap) {
+          el.setAttribute('data-hqm-track', ''); tracked++;
+        }
+      }
+    });
+    seen.sort((a, b) => a.fs - b.fs);
+    typeStats = { floored, tracked, smallest: seen.slice(0, 8) };
+  }
+
+  let styleEl = null;
+  /* persist=false when the change came FROM storage: writing it back would fire
+     another storage event in the other document and the frames would ping-pong */
+  function apply(persist = true) {
+    if (!styleEl) {
+      styleEl = document.createElement('style');
+      styleEl.id = 'hqm-palette-lab-css';
+      document.head.appendChild(styleEl);
+    }
+    /* keep it last in <head> so equal-specificity overrides win on order */
+    if (styleEl !== document.head.lastElementChild) document.head.appendChild(styleEl);
+    styleEl.textContent = buildCSS(cur());
+    syncWebFonts(cur());
+    typePass();
+    if (persist) save();
+  }
+
+  /* Loads whichever researched families the current slot actually uses, from
+     Google Fonts, DEV ONLY — this component never ships, so neither does the
+     request. Vendored families never hit this path (absent from GF). */
+  function syncWebFonts(s) {
+    const wanted = new Set();
+    for (const n of Object.keys(FONT_BASE)) {
+      const v = fontVal(s, n);
+      for (const fam of Object.keys(GF)) {
+        if (v.indexOf(`'${fam}'`) !== -1) wanted.add(GF[fam]);
+      }
+    }
+    let link = document.getElementById('hqm-pl-gf');
+    if (!wanted.size) { if (link) link.remove(); return; }
+    const href = 'https://fonts.googleapis.com/css2?family=' +
+      Array.from(wanted).sort().join('&family=') + '&display=swap';
+    if (!link) {
+      link = document.createElement('link');
+      link.id = 'hqm-pl-gf';
+      link.rel = 'stylesheet';
+      document.head.appendChild(link);
+    }
+    if (link.getAttribute('href') !== href) link.setAttribute('href', href);
+  }
+
+  /* ── Contrast model ── */
+  function grounds(s, theme) {
+    const g = {};
+    for (const surf of SURFACES) g[surf.replace('--','')] = hex2rgb(tokenVal(s, theme, surf));
+    const space = hex2rgb(tokenVal(s, theme, '--space'));
+    const cardA = knobVal(s, theme === 'dark' ? 'cardDark' : 'cardLight');
+    /* card ground = the slot's own panel over its own sky, both themes —
+       matches what buildCSS now emits */
+    const cardBase = hex2rgb(tokenVal(s, theme, '--panel'));
+    g.card = over(cardBase, space, cardA);
+    return g;
+  }
+  function rows(s, theme) {
+    const g = grounds(s, theme);
+    const glow = knobVal(s, theme === 'dark' ? 'glowDark' : 'glowLight');
+    const space = hex2rgb(tokenVal(s, theme, '--space'));
+    const coronaOn = ruleOn(s, 'corona');
+    return INKS.map(name => {
+      const ink = hex2rgb(tokenVal(s, theme, name));
+      const cells = Object.entries(g).map(([k, bg]) => [k, ratio(ink, bg)]);
+      /* the audit's key ground: an accent's own glow, under text in that accent.
+         With the corona the centre is clear, so the ground is plain --space. */
+      const heroGround = coronaOn ? space : over(ink, space, glow);
+      cells.push(['hero', ratio(ink, heroGround)]);
+      return { name, hex: rgb2hex(ink), cells };
+    });
+  }
+
+  /* ── Rendering ── */
+  const $ = sel => document.querySelector(sel);
+  const esc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+  function renderDirs() {
+    $('#hqm-pl-dir').innerHTML = Object.entries(DIRECTIONS)
+      .map(([k, d]) => `<option value="${k}">${esc(d.label)}</option>`).join('');
+    $('#hqm-pl-tdir').innerHTML = Object.entries(TYPE_DIRECTIONS)
+      .map(([k, d]) => `<option value="${k}">${esc(d.label)}</option>`).join('');
+  }
+
+  function renderTokens() {
+    const s = cur(), theme = themeNow();
+    $('#hqm-pl-themetag').textContent = `— editing ${theme}`;
+    $('#hqm-pl-tokens').innerHTML = Object.keys(BASE[theme]).map(name => {
+      const v = tokenVal(s, theme, name);
+      const moved = v.toLowerCase() !== BASE[theme][name].toLowerCase();
+      return `<div class="hqm-pl-tok" data-moved="${moved}">
+        <input type="color" value="${v}" data-token="${name}" aria-label="${name}">
+        <code>${name}</code>
+        <span class="hqm-pl-val">${v}${moved ? ' ←' + BASE[theme][name] : ''}</span>
+        <button type="button" data-revert="${name}" ${moved ? '' : 'style="visibility:hidden"'}>↺</button>
+      </div>`;
+    }).join('');
+  }
+
+  function renderKnobs() {
+    const s = cur();
+    $('#hqm-pl-knobs').innerHTML = KNOB_META.map(([k, label, min, max, step]) => {
+      const v = knobVal(s, k);
+      return `<label><span>${label}</span>
+        <input type="range" min="${min}" max="${max}" step="${step}" value="${v}" data-knob="${k}">
+        <output>${(+v).toFixed(2)}</output></label>`;
+    }).join('');
+  }
+
+  function renderRules() {
+    const s = cur();
+    $('#hqm-pl-rules').innerHTML = RULE_META.map(([k, label]) =>
+      `<label><input type="checkbox" data-rule="${k}" ${ruleOn(s, k) ? 'checked' : ''}> ${esc(label)}</label>`
+    ).join('');
+  }
+
+  function renderType() {
+    const s = cur();
+    $('#hqm-pl-tdir').value = s.tdir;
+    $('#hqm-pl-tdirnote').textContent = tdirOf(s).note;
+    $('#hqm-pl-fonts').innerHTML = Object.entries(FONT_CHOICES).map(([name, opts]) => {
+      const v = fontVal(s, name);
+      const moved = v !== FONT_BASE[name];
+      return `<label class="hqm-pl-font${moved ? ' moved' : ''}">
+        <span><code>${name}</code></span>
+        <select data-font="${name}">${opts.map(([lbl, val]) =>
+          `<option value="${esc(val)}"${val === v ? ' selected' : ''}>${esc(lbl)}</option>`).join('')}</select>
+      </label>`;
+    }).join('');
+    $('#hqm-pl-tknobs').innerHTML = TKNOB_META.map(([k, label, min, max, step]) => {
+      const v = tknobVal(s, k);
+      return `<label><span>${label}</span>
+        <input type="range" min="${min}" max="${max}" step="${step}" value="${v}" data-tknob="${k}">
+        <output>${k === 'floor' ? v : (+v).toFixed(2)}</output></label>`;
+    }).join('');
+    $('#hqm-pl-trules').innerHTML = TRULE_META.map(([k, label]) =>
+      `<label><input type="checkbox" data-trule="${k}" ${truleOn(s, k) ? 'checked' : ''}> ${esc(label)}</label>`
+    ).join('');
+    renderTypeRead();
+  }
+
+  function renderTypeRead() {
+    const s = cur();
+    const floor = tknobVal(s, 'floor');
+    const head = floor
+      ? `<p class="hqm-pl-note"><b>${typeStats.floored}</b> elements raised to ${floor}px` +
+        (typeStats.tracked ? `, <b>${typeStats.tracked}</b> de-tracked` : '') + `.</p>`
+      : `<p class="hqm-pl-note">Floor off — sizes below are what ships.</p>`;
+    $('#hqm-pl-typeread').innerHTML = head + `<table><thead><tr>` +
+      `<th>px</th><th>element</th><th>text</th></tr></thead><tbody>` +
+      typeStats.smallest.map(r =>
+        `<tr><td class="${r.fs < 12 ? 'fail' : (r.fs < 14 ? 'near' : 'pass')}">${r.fs.toFixed(1)}</td>` +
+        `<td>${esc(r.tag)}${r.cls ? '.' + esc(r.cls) : ''}</td>` +
+        `<td>${esc(r.text)}</td></tr>`).join('') +
+      `</tbody></table>` +
+      `<p class="hqm-pl-note">Natural sizes, measured before the floor is applied.</p>`;
+  }
+
+  function renderContrast() {
+    const s = cur(), theme = themeNow();
+    const data = rows(s, theme);
+    const failOnly = $('#hqm-pl-failonly').checked;
+    const cols = ['space','panel','panel-2','card','hero'];
+    let fails = 0, total = 0;
+    const body = data.map(r => {
+      const bad = r.cells.some(([, v]) => v < 4.5);
+      r.cells.forEach(([, v]) => { total++; if (v < 4.5) fails++; });
+      if (failOnly && !bad) return '';
+      return `<tr><td title="${r.hex}">${r.name.replace('--','')}</td>` + cols.map(c => {
+        const cell = r.cells.find(([k]) => k === c);
+        const v = cell ? cell[1] : 0;
+        const cls = v >= 4.5 ? 'pass' : (v >= 3 ? 'near' : 'fail');
+        return `<td class="${cls}">${v.toFixed(2)}</td>`;
+      }).join('') + '</tr>';
+    }).join('');
+    $('#hqm-pl-contrast').innerHTML = `<table><thead><tr><th>ink</th>` +
+      cols.map(c => `<th>${c}</th>`).join('') + `</tr></thead><tbody>` +
+      (body || `<tr><td colspan="6" class="pass">no ink below 4.5 on any ground</td></tr>`) +
+      `</tbody></table>`;
+    $('#hqm-pl-score').innerHTML = fails
+      ? `<span class="fail">${fails}</span> / ${total} pairs under 4.5`
+      : `<span class="pass">all ${total} pairs ≥ 4.5</span>`;
+  }
+
+  function renderSlots() {
+    $('#hqm-pl-slot').innerHTML = SLOT_SEEDS.map((s, i) =>
+      `<button type="button" data-slot="${i}" class="${i === state.slot ? 'on' : ''}"` +
+      ` title="${esc(s.name)}">${esc(s.short)}${s.recommended ? ' ★' : ''}` +
+      `${s.locked ? ' 🔒' : ''}</button>`).join('');
+    const seed = SLOT_SEEDS[state.slot];
+    $('#hqm-pl-slotnote').innerHTML =
+      `<b>${esc(seed.name)}</b>${seed.recommended ? ' — <b>recommended</b>' : ''}<br>${esc(seed.note)}` +
+      (seed.look ? `<br><span class="hqm-pl-look">👁 Where to look: ${esc(seed.look)}</span>` : '');
+  }
+
+  function renderAll() {
+    const s = cur();
+    renderSlots();
+    $('#hqm-pl-dir').value = s.dir;
+    $('#hqm-pl-dirnote').textContent = dirOf(s).note;
+    /* the locked control slot exposes its values but refuses edits */
+    const lock = isLocked();
+    $('#hqm-pl-panel').setAttribute('data-locked', String(lock));
+    /* these three are static nodes, unlike the re-rendered sections below, so
+       they must be re-ENABLED on the way out of the locked slot too */
+    $('#hqm-pl-reset').disabled = lock;
+    $('#hqm-pl-dir').disabled = lock;
+    $('#hqm-pl-tdir').disabled = lock;
+    $('#hqm-pl-hold').disabled = lock;   /* nothing to compare on the control */
+    const attr = document.documentElement.getAttribute('data-theme') || '';
+    document.querySelectorAll('#hqm-pl-theme button').forEach(b =>
+      b.classList.toggle('on', b.dataset.theme === attr));
+    renderTokens(); renderKnobs(); renderRules(); renderType(); renderContrast();
+    if (lock) {
+      $('#hqm-pl-panel').querySelectorAll(
+        '#hqm-pl-dir, #hqm-pl-tdir, #hqm-pl-tokens input, #hqm-pl-tokens button,' +
+        ' #hqm-pl-knobs input, #hqm-pl-rules input, #hqm-pl-fonts select,' +
+        ' #hqm-pl-tknobs input, #hqm-pl-trules input'
+      ).forEach(el => { el.disabled = true; });
+    }
+  }
+
+  /* ── Report ── */
+  function deviations(s, theme) {
+    const d = dirOf(s), out = [];
+    for (const name of Object.keys(BASE[theme])) {
+      const v = tokenVal(s, theme, name);
+      const dirV = d.tokens[theme][name] ?? BASE[theme][name];
+      if (v.toLowerCase() !== dirV.toLowerCase()) out.push([name, dirV, v]);
+    }
+    return out;
+  }
+
+  function report() {
+    const s = cur(), theme = themeNow(), d = dirOf(s);
+    const L = [];
+    const seed = SLOT_SEEDS[state.slot];
+    L.push(`# Palette Lab report — ${seed.name}`);
+    L.push('');
+    L.push(`- Slot: **${seed.short}**${seed.recommended ? ' (the audit\'s pick)' : ''}${seed.locked ? ' — LOCKED control' : ''}`);
+    L.push(`- Direction: **${d.label}**`);
+    L.push(`- Theme viewed: **${theme}**`);
+    L.push(`- Page: \`${location.pathname}\``);
+    L.push('');
+    for (const t of ['dark', 'light']) {
+      const dev = deviations(s, t);
+      L.push(`## Hand adjustments — ${t}`);
+      if (!dev.length) L.push(`_none; direction values used as-is._`);
+      else {
+        L.push('| token | direction value | my value |');
+        L.push('|---|---|---|');
+        dev.forEach(([n, a, b]) => L.push(`| \`${n}\` | ${a} | **${b}** |`));
+      }
+      L.push('');
+    }
+    const knobDev = KNOB_META.filter(([k]) => knobVal(s, k) !== (d.knobs[k] ?? KNOB_BASE[k]));
+    L.push('## Knobs');
+    if (!knobDev.length) L.push('_direction defaults._');
+    else knobDev.forEach(([k, label]) =>
+      L.push(`- ${label}: **${knobVal(s, k)}** (direction: ${d.knobs[k] ?? KNOB_BASE[k]})`));
+    L.push('');
+    L.push('## Rules active');
+    RULE_META.forEach(([k, label]) => L.push(`- [${ruleOn(s, k) ? 'x' : ' '}] ${label}`));
+    L.push('');
+    const td = tdirOf(s);
+    L.push(`## Type — ${td.label}`);
+    const fontDev = Object.keys(FONT_BASE)
+      .filter(n => fontVal(s, n) !== (td.fonts[n] ?? FONT_BASE[n]));
+    if (fontDev.length) {
+      L.push('Families changed by hand:');
+      fontDev.forEach(n => L.push(`- \`${n}\` → ${fontVal(s, n)}`));
+    }
+    const activeFonts = Object.keys(FONT_BASE).filter(n => fontVal(s, n) !== FONT_BASE[n]);
+    if (activeFonts.length) {
+      L.push('Families differing from what ships:');
+      activeFonts.forEach(n => L.push(`- \`${n}\`: ${FONT_BASE[n]} → **${fontVal(s, n)}**`));
+    } else L.push('_families as shipped._');
+    TKNOB_META.forEach(([k, label]) => {
+      const v = tknobVal(s, k);
+      if (v !== TKNOB_BASE[k]) L.push(`- ${label}: **${v}**`);
+    });
+    TRULE_META.forEach(([k, label]) => L.push(`- [${truleOn(s, k) ? 'x' : ' '}] ${label}`));
+    L.push(`- floor raised **${typeStats.floored}** elements` +
+      (typeStats.tracked ? `, de-tracked **${typeStats.tracked}**` : '') +
+      ` on \`${location.pathname}\``);
+    if (typeStats.smallest.length) {
+      L.push('');
+      L.push('Smallest natural text on this page (pre-floor):');
+      L.push('| px | element | text |');
+      L.push('|---|---|---|');
+      typeStats.smallest.forEach(r =>
+        L.push(`| ${r.fs.toFixed(1)} | ${r.tag}${r.cls ? '.' + r.cls : ''} | ${r.text.replace(/\|/g, '\\|')} |`));
+    }
+    L.push('');
+    for (const t of ['dark', 'light']) {
+      L.push(`## Contrast — ${t} (composited)`);
+      L.push('| ink | space | panel | panel-2 | card | hero |');
+      L.push('|---|---|---|---|---|---|');
+      rows(s, t).forEach(r => {
+        const cells = ['space','panel','panel-2','card','hero'].map(c => {
+          const v = (r.cells.find(([k]) => k === c) || [0,0])[1];
+          return v.toFixed(2) + (v < 4.5 ? ' ⚠' : '');
+        });
+        L.push(`| ${r.name} \`${r.hex}\` | ${cells.join(' | ')} |`);
+      });
+      L.push('');
+    }
+    L.push('## CSS as applied');
+    L.push('```css');
+    L.push(buildCSS(s) || '/* no overrides — baseline */');
+    L.push('```');
+    L.push('');
+    L.push('_Generated by the dev-only Palette Lab. Ratios are computed in-browser ' +
+           'against composited grounds; `hero` is the ink over its own glow on `--space`. ' +
+           'Accent `-dim`/`-glow` values are re-derived automatically from the accent hex._');
+    return L.join('\n');
+  }
+
+  async function copy(text, label) {
+    let ok = false;
+    try { await navigator.clipboard.writeText(text); ok = true; }
+    catch (e) {
+      /* clipboard API needs a secure context; the LAN dev URL is plain http,
+         so fall back rather than failing silently on the device you most
+         want to test on */
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.style.cssText = 'position:fixed;opacity:0;';
+      document.body.appendChild(ta); ta.select();
+      try { ok = document.execCommand('copy'); } catch (e2) { ok = false; }
+      ta.remove();
+    }
+    const toast = $('#hqm-pl-toast');
+    toast.textContent = ok ? `${label} copied` : 'copy blocked — see console';
+    if (!ok) console.log('[palette-lab] copy failed; report below:\n\n' + text);
+    setTimeout(() => { toast.textContent = ''; }, 2200);
+  }
+
+  /* ── Framed mode: apply, follow, no UI ── */
+  if (inFrame) {
+    const shell = document.getElementById('hqm-palette-lab');
+    if (shell) shell.remove();
+    apply(false);
+    window.addEventListener('storage', e => {
+      if (e.key !== KEY) return;
+      reloadState(); apply(false);
+    });
+    document.addEventListener('astro:after-swap', () => { styleEl = null; apply(false); });
+    return;
+  }
+
+  /* ── Events ── */
+  const root = $('#hqm-palette-lab');
+  const setOpen = v => root.setAttribute('data-open', String(v));
+  $('#hqm-pl-fab').addEventListener('click', () => { setOpen(true); renderAll(); });
+  $('#hqm-pl-close').addEventListener('click', () => setOpen(false));
+
+  $('#hqm-pl-slot').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    state.slot = parseInt(b.dataset.slot, 10); apply(); renderAll();
+  });
+  $('#hqm-pl-swap').addEventListener('click', () => {
+    state.slot = (state.slot + 1) % SLOT_SEEDS.length; apply(); renderAll();
+  });
+  $('#hqm-pl-theme').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    const t = b.dataset.theme;
+    if (t) document.documentElement.setAttribute('data-theme', t);
+    else document.documentElement.removeAttribute('data-theme');
+    /* app.js reads 'hqm-theme'; write the same key or the lab's choice is
+       forgotten on the next navigation */
+    try { t ? localStorage.setItem('hqm-theme', t) : localStorage.removeItem('hqm-theme'); } catch (e2) {}
+    renderAll();
+  });
+  $('#hqm-pl-dir').addEventListener('change', e => {
+    cur().dir = e.target.value;
+    /* a direction change resets hand tweaks — otherwise you are comparing a
+       direction against edits made on top of a different one */
+    cur().tokens = { dark: {}, light: {} }; cur().knobs = {}; cur().rules = {};
+    apply(); renderAll();
+  });
+  $('#hqm-pl-tokens').addEventListener('input', e => {
+    const t = e.target.dataset.token; if (!t) return;
+    cur().tokens[themeNow()][t] = e.target.value;
+    apply(); renderTokens(); renderContrast();
+  });
+  $('#hqm-pl-tokens').addEventListener('click', e => {
+    const t = e.target.dataset.revert; if (!t) return;
+    delete cur().tokens[themeNow()][t];
+    apply(); renderTokens(); renderContrast();
+  });
+  $('#hqm-pl-knobs').addEventListener('input', e => {
+    const k = e.target.dataset.knob; if (!k) return;
+    cur().knobs[k] = parseFloat(e.target.value);
+    e.target.nextElementSibling.textContent = parseFloat(e.target.value).toFixed(2);
+    apply(); renderContrast();
+  });
+  $('#hqm-pl-rules').addEventListener('change', e => {
+    const k = e.target.dataset.rule; if (!k) return;
+    cur().rules[k] = e.target.checked ? 1 : 0;
+    apply(); renderContrast();
+  });
+  $('#hqm-pl-tdir').addEventListener('change', e => {
+    cur().tdir = e.target.value;
+    cur().fonts = {}; cur().tknobs = {}; cur().trules = {};
+    apply(); renderAll();
+  });
+  $('#hqm-pl-fonts').addEventListener('change', e => {
+    const n = e.target.dataset.font; if (!n) return;
+    cur().fonts[n] = e.target.value;
+    apply(); renderType();
+  });
+  $('#hqm-pl-tknobs').addEventListener('input', e => {
+    const k = e.target.dataset.tknob; if (!k) return;
+    const v = parseFloat(e.target.value);
+    cur().tknobs[k] = v;
+    e.target.nextElementSibling.textContent = k === 'floor' ? v : v.toFixed(2);
+    apply(); renderTypeRead();
+  });
+  $('#hqm-pl-trules').addEventListener('change', e => {
+    const k = e.target.dataset.trule; if (!k) return;
+    cur().trules[k] = e.target.checked ? 1 : 0;
+    apply(); renderTypeRead();
+  });
+  $('#hqm-pl-remeasure').addEventListener('click', () => { typePass(); renderTypeRead(); });
+  $('#hqm-pl-failonly').addEventListener('change', renderContrast);
+  $('#hqm-pl-copy').addEventListener('click', () => copy(report(), 'report'));
+  $('#hqm-pl-copycss').addEventListener('click', () =>
+    copy(buildCSS(cur()) || '/* no overrides */', 'CSS'));
+  /* hold-to-compare: while pressed, the overrides vanish and the shipped site
+     shows; release restores the slot. Blink between the two a few times and a
+     one-step ink shift becomes obvious. */
+  {
+    const hold = $('#hqm-pl-hold');
+    const preview = showBaseline => {
+      if (!styleEl) return;
+      styleEl.textContent = showBaseline ? '' : buildCSS(cur());
+    };
+    hold.addEventListener('pointerdown', () => preview(true));
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev =>
+      hold.addEventListener(ev, () => preview(false)));
+  }
+
+  /* reset restores this slot's SEED, not an empty slot — an emptied slot would
+     silently become a second copy of the control */
+  $('#hqm-pl-reset').addEventListener('click', () => {
+    if (isLocked()) return;
+    state.slots[state.slot] = seedSlot(state.slot); apply(); renderAll();
+  });
+
+  document.addEventListener('keydown', e => {
+    if (!e.altKey || e.ctrlKey || e.metaKey) return;
+    const k = e.key.toLowerCase();
+    if (k === 'p') { e.preventDefault(); setOpen(root.getAttribute('data-open') !== 'true'); renderAll(); }
+    if (k === 'b') {
+      e.preventDefault();
+      /* Alt+Shift+B steps back, so you can A/B two adjacent slots without
+         cycling all the way round */
+      const n = SLOT_SEEDS.length;
+      state.slot = (state.slot + (e.shiftKey ? n - 1 : 1)) % n;
+      apply(); renderAll();
+    }
+  });
+  window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', renderAll);
+  /* ClientRouter swaps <head>, taking the override <style> with it */
+  document.addEventListener('astro:after-swap', () => { styleEl = null; apply(); renderAll(); });
+
+  /* another tab (or a devview frame) changed the state — follow it */
+  window.addEventListener('storage', e => {
+    if (e.key !== KEY) return;
+    reloadState(); apply(false); renderAll();
+  });
+
+  renderDirs(); apply(); renderAll();
+  console.log('[palette-lab] dev only · Alt+P panel · Alt+B swap A/B slot · ' +
+    'open /devview in another tab to see the current palette on every device at once');
+})();
+</script>
