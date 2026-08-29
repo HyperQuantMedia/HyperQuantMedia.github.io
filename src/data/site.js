@@ -109,7 +109,7 @@ export const social = [
   {
     key: 'x',
     label: 'X',
-    href: null,
+    href: 'https://x.com/HyperQuantMedia',
   },
   {
     key: 'youtube',
