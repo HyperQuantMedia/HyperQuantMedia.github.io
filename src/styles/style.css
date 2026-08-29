@@ -87,9 +87,15 @@
   /* Section veil. Banded sections used solid --space, which blocked the
      constellation field and made it appear and disappear down the page.
      Translucent instead, so the field is continuous while text keeps its
-     contrast. */
-  --veil:             rgba(7, 7, 26, 0.72);
-  --veil-deep:        rgba(4, 4, 12, 0.78);
+     contrast.
+     RETUNED 2026-08-29: the old rgba(7,7,26,.72) composited to within ~0.2%
+     luminance of the void, so the band tone was invisible and alternation
+     hung entirely on the starfield dimming — in light mode it vanished and
+     the hairlines read as stray strips. Panel-toned lift instead; the alpha
+     is as high as --star-faint's 4.5:1 floor on the composited band allows
+     (it measures 4.55 here — PAL-05's zero-headroom ink is the constraint). */
+  --veil:             rgba(11, 12, 34, 0.80);
+  --veil-deep:        rgba(4, 4, 12, 0.86);
   --polaris-bright:   #ffd98a;
   --logo-plate:       #f4f5f8;
 
@@ -190,8 +196,12 @@
     --card-fill:       rgba(255, 255, 255, 0.82);
     --card-fill-hover: rgba(255, 255, 255, 0.96);
     --tag-fill:        rgba(18, 22, 56, 0.04);
-    --veil:            rgba(246, 247, 251, 0.80);
-    --veil-deep:       rgba(238, 241, 248, 0.86);
+    /* Band = paper-white lift, not a grey step down: every light accent is
+       tuned to pass on white (the panels ARE white), so lifting the band
+       toward white GAINS contrast, while any grey deep enough to see would
+       drop nebula/rose text on banded sections under 4.5. Measured. */
+    --veil:            rgba(255, 255, 255, 0.78);
+    --veil-deep:       rgba(228, 233, 243, 0.90);
     --logo-plate:      #ffffff;
   }
 }
@@ -262,8 +272,12 @@
   --card-fill:       rgba(255, 255, 255, 0.82);
   --card-fill-hover: rgba(255, 255, 255, 0.96);
   --tag-fill:        rgba(18, 22, 56, 0.04);
-  --veil:            rgba(246, 247, 251, 0.80);
-  --veil-deep:       rgba(238, 241, 248, 0.86);
+  /* Band = paper-white lift, not a grey step down: every light accent is
+       tuned to pass on white (the panels ARE white), so lifting the band
+       toward white GAINS contrast, while any grey deep enough to see would
+       drop nebula/rose text on banded sections under 4.5. Measured. */
+  --veil:            rgba(255, 255, 255, 0.78);
+  --veil-deep:       rgba(228, 233, 243, 0.90);
   --logo-plate:      #ffffff;
 }
 
@@ -624,20 +638,19 @@ em { font-style: italic; }
    neither existed until the hamburger was opened -- at every width under
    992px, tablets included. .mobile-social (the in-menu row) is gone with it.
 
-   The social row is centred on the BAR, not between its neighbours: an auto
-   margin would centre it in the leftover space, which moves as the brand
-   lockup changes width. Absolute, so it also cannot push the brand or the
-   controls around. pointer-events stay on the links only, so the invisible
-   full-width band cannot swallow a tap meant for the bar. */
+   HISTORY, 2026-08-30: this row used to be absolutely centred on the BAR,
+   with auto-margin centring explicitly rejected because the centre would
+   drift as the lockup changed width. That held at four icons. The fifth (X)
+   made the row wider than the viewport-centred slot on phones — measured
+   overlapping the lockup by 6px at 320 and 360px wide. So the trade flips:
+   centred between its neighbours, where the drift is the feature — the row
+   takes the space that actually exists. As a flex child it is also no longer
+   a full-width band, so the pointer-events dance goes with it. */
 .nav-social-center {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
+  margin-left: auto;
   align-items: center;
   gap: 0;
-  pointer-events: none;
 }
-.nav-social-center .brand-social-link { pointer-events: auto; }
 
 /* The theme control sits hard against the menu button: the two chrome
    controls read as a pair, which is where it was asked for. */
@@ -654,6 +667,12 @@ em { font-style: italic; }
   .nav-social-center .brand-social-link { width: 27px; height: 27px; }
   .nav-social-center .brand-social-link svg { width: 15px; height: 15px; }
   .nav-utility { margin-right: 2px; }
+}
+/* Five icons at 27px are 135px and the zone between lockup and controls is
+   ~130px at 320 — one step down. 24px is WCAG 2.5.8's floor, not below it. */
+@media (max-width: 359.98px) {
+  .nav-social-center .brand-social-link { width: 24px; height: 24px; }
+  .nav-social-center .brand-social-link svg { width: 14px; height: 14px; }
 }
 
 /* The stacked brand is taller than a single line, so the scrolled navbar keeps
@@ -810,8 +829,13 @@ body.field-live::before { opacity: 0; }
   position: absolute;
   inset: 0;
   /* Softened: with the field now continuous behind every section, fading all
-     the way to --void here drew a visible seam at the hero's bottom edge. */
+     the way to --void here drew a visible seam at the hero's bottom edge.
+     The mask finishes the job: on ultrawide viewports the ellipse's terminal
+     stop still landed as a horizontal band just above the hero's end, so the
+     scrim itself now fades to nothing over the hero's last quarter. */
   background: radial-gradient(ellipse 90% 70% at center, transparent 0%, var(--hero-scrim) 85%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 72%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 72%, transparent 100%);
   z-index: 1;
   pointer-events: none;
 }
@@ -1337,14 +1361,27 @@ body.field-live::before { opacity: 0; }
 }
 
 /* ── Home — Constellation / Ecosystem Teaser ── */
+/* A real band carrying the aurora tint on top — it takes the BAND slot in the
+   homepage's alternation, so it gets the veil and the hairlines; the gradient
+   rides over the veil as background-image. (Its earlier form was tint-only
+   fading out mid-section, which left its bottom hairline floating between two
+   identical grounds.) */
 .ecosystem-section {
-  background:
+  background-color: var(--veil);
+  background-image:
     radial-gradient(80% 60% at 50% 0%, color-mix(in srgb, var(--aurora) 6%, transparent), transparent 60%);
   border-top: 1px solid var(--line-faint);
   border-bottom: 1px solid var(--line-faint);
 }
 
+/* (The 2026-08-29 "wash" third treatment is retired — owner rule 2026-08-30:
+   strict O-B alternation only. The aurora tint survives solely as decor ON the
+   homepage Cosmos band above.) */
+
 /* ── Pedigree / Logos (homepage + services, one component) ── */
+/* The pedigree is a BAND, always — owner rule, 2026-08-30. Every page that
+   includes it counts it as the B slot in its alternation; do not strip the
+   veil per page. */
 .experience-section { background: var(--veil); border-top: 1px solid var(--line-faint); border-bottom: 1px solid var(--line-faint); }
 
 /* The homepage treatment: the band owns roughly two-thirds of a viewport at
@@ -1628,7 +1665,10 @@ body.field-live::before { opacity: 0; }
 }
 
 /* ── CTA Block ── */
-.cta-section { background: var(--veil); border-top: 1px solid var(--line-faint); }
+/* The CTA is not a special treatment — owner rule, 2026-08-30: pages run
+   a strict O-B-O-B alternation and the CTA takes whatever slot parity
+   hands it. Pages add .band alongside this class when it lands on B
+   (home, services, cosmos); vision and studio land it on O. */
 
 .cta-block {
   position: relative;
@@ -1684,9 +1724,61 @@ body.field-live::before { opacity: 0; }
 .service-feature-list li::before { content: '✦'; position: absolute; left: 0; color: var(--polaris); font-size: 0.7rem; top: 9px; }
 
 /* ── Vision Page ── */
-.mv-card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 38px 32px; height: 100%; }
-.mv-label { font-family: var(--font-mono); font-size: 0.7rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 16px; }
-.mv-text { font-size: 1rem; color: var(--star-dim); line-height: 1.8; margin-bottom: 14px; }
+/* Mission / Vision — the same card language as the Core values below them:
+   the value-card contract carries the surface, accent rails, rim and hover;
+   this class only keeps the roomier padding and the icon-beside-label head.
+   The label takes the card's accent, replacing the old c-* utilities. */
+.value-card.mv-card { padding: 34px 32px 26px; border-radius: var(--radius-lg); }
+.mv-head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+/* The studio belief-mark's glow, carried across: lit at rest, brighter and
+   tighter on hover. Each glyph glows in its own ink — the accent glyphs in
+   their card's accent, the gold star below in gold. */
+.mv-head .value-icon {
+  margin-bottom: 0;
+  font-size: 1.25rem;
+  filter:
+    drop-shadow(0 0 5px var(--accent-glow, var(--polaris-glow)))
+    drop-shadow(0 0 14px var(--accent-glow, var(--polaris-glow)));
+}
+.value-card:hover .mv-head .value-icon {
+  filter:
+    drop-shadow(0 0 6px var(--accent, var(--polaris)))
+    drop-shadow(0 0 20px var(--accent-glow, var(--polaris-glow)));
+}
+/* Sized to match .value-title (1.04rem) so the three cards above and the four
+   below read as one family of card titles. */
+.mv-label {
+  font-family: var(--font-mono); font-size: 1.04rem; font-weight: 700;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--accent, var(--polaris));
+  text-shadow: 0 0 14px var(--accent-glow, var(--polaris-glow));
+  transition: text-shadow var(--transition);
+}
+.value-card:hover .mv-label {
+  text-shadow: 0 0 8px var(--accent-glow, var(--polaris-glow)),
+               0 0 24px var(--accent-glow, var(--polaris-glow));
+}
+/* The Belief card's eight-point star: same path AND same stellar ink as the
+   studio belief-mark — one star, one colour, wherever it appears. It takes
+   the card's accent, so it follows if the card ever changes hue. */
+.mv-mark {
+  display: block;
+  width: 22px;
+  height: 22px;
+  fill: var(--accent, var(--stellar));
+  filter:
+    drop-shadow(0 0 5px var(--accent-glow, var(--stellar-glow)))
+    drop-shadow(0 0 14px var(--accent-glow, var(--stellar-glow)));
+  transition: filter var(--transition);
+}
+.value-card:hover .mv-mark {
+  filter:
+    drop-shadow(0 0 6px var(--accent, var(--stellar)))
+    drop-shadow(0 0 20px var(--accent-glow, var(--stellar-glow)));
+}
+/* A step above the site's 1rem body: these three cards are the company's
+   own words, and the size difference is the emphasis. */
+.mv-text { font-size: 1.08rem; color: var(--star-dim); line-height: 1.8; margin-bottom: 14px; }
 
 .how-we-work-list { display: flex; flex-direction: column; gap: 16px; }
 /* On the Vision page the steps are cards rather than bare list items, so they
