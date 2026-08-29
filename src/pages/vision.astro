@@ -22,12 +22,12 @@ import Cta from '../components/Cta.astro';
   </section>
 
   <!-- Mission & Vision -->
-  <section class="section-padding">
+  <section class="section-padding band">
     <div class="container">
       <div class="row g-5">
-        <div class="col-lg-6 fade-in-left">
-          <div class="mv-card">
-            <div class="mv-label c-nebula">Mission</div>
+        <div class="col-lg-4 fade-in-left">
+          <div class="mv-card value-card a-nebula">
+            <div class="mv-head"><span class="value-icon">◎</span><div class="mv-label">Mission</div></div>
             <p class="mv-text">
               Our mission goes beyond just delivering digital solutions — we aim to set new standards
               for innovation, creativity, and impact in everything we do.
@@ -39,9 +39,31 @@ import Cta from '../components/Cta.astro';
             </p>
           </div>
         </div>
-        <div class="col-lg-6 fade-in-right">
-          <div class="mv-card">
-            <div class="mv-label c-aurora">Vision</div>
+        <div class="col-lg-4 fade-in-up">
+          <div class="mv-card value-card a-stellar">
+            {/* The studio page's eight-point star, in the same stellar ink it
+                wears there — one star, one colour, wherever it appears. */}
+            <div class="mv-head">
+              <svg class="mv-mark" viewBox="0 0 48 48" aria-hidden="true">
+                <path d="M 24.00 3.00 Q 25.15 21.23 32.49 15.51 Q 26.77 22.85 45.00 24.00 Q 26.77 25.15 32.49 32.49 Q 25.15 26.77 24.00 45.00 Q 22.85 26.77 15.51 32.49 Q 21.23 25.15 3.00 24.00 Q 21.23 22.85 15.51 15.51 Q 22.85 21.23 24.00 3.00 Z" />
+              </svg>
+              <div class="mv-label">Belief</div>
+            </div>
+            <p class="mv-text">
+              Applied AI runs through everything we build — as instruments, not autopilots. We use it
+              for momentum: faster prototypes, cheaper failures, ten experiments where one used to fit.
+            </p>
+            <p class="mv-text">
+              We build these systems to augment people, never to replace them: the same team attempting
+              more, in breadth and in depth, with the judgement that decides what ships staying human.
+              A tool is measured by what it multiplies, not by the headcount it removes. Augmented
+              humans chart further.
+            </p>
+          </div>
+        </div>
+        <div class="col-lg-4 fade-in-right">
+          <div class="mv-card value-card a-aurora">
+            <div class="mv-head"><span class="value-icon">✧</span><div class="mv-label">Vision</div></div>
             <p class="mv-text">
               We envision shaping the future of digital experiences through emerging technology and
               authentic human connection.
@@ -57,7 +79,7 @@ import Cta from '../components/Cta.astro';
   </section>
 
   <!-- Core Values -->
-  <section class="section-padding band">
+  <section class="section-padding">
     <div class="container">
       <div class="text-center fade-in-up mb-5">
         <div class="section-label justify-content-center d-inline-flex">What Drives Us</div>
@@ -97,7 +119,7 @@ import Cta from '../components/Cta.astro';
   </section>
 
   <!-- How We Work -->
-  <section class="section-padding">
+  <section class="section-padding band">
     <div class="container">
       <div class="row justify-content-center">
         <div class="col-lg-10 text-center fade-in-up mb-5">
