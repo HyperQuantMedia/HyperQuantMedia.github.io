@@ -1,6 +1,6 @@
 # Agent traps — HyperQuantMedia.github.io
 
-Read and obey `../AGENTS.md` (workspace-level standing rules) before anything
+Read and obey `../../AGENTS.md` (workspace-level standing rules) before anything
 else.
 
 Every trap below has cost real time at least once. They are facts about this

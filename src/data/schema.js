@@ -52,6 +52,21 @@ const organization = {
   '@type': 'Organization',
   '@id': ORG_ID,
   name: site.name,
+  // The short forms a reader may search instead of the full name. "HyperQuant"
+  // alone is owned by several older entities, so this is a hint that helps a
+  // crawler connect an alias to an entity it already knows -- not a lever that
+  // wins the query on its own.
+  alternateName: site.alternateNames,
+  // The registered entity. Distinct from `name`: `name` is what the company is
+  // called, `legalName` is what it is registered as, and only the second can be
+  // matched against a business register. The footer prints the same string, so
+  // this asserts nothing the page does not also say.
+  legalName: site.legalName,
+  // When the entity named by `legalName` was incorporated. Sourced from the
+  // certificate, which is why this file can now state it at all -- the rule at
+  // the top refuses an invented founding date, and until there was a document
+  // there was nothing to state.
+  foundingDate: site.foundingDate,
   url: site.url,
   description: site.description,
   slogan: site.tagline,

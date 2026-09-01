@@ -10,6 +10,40 @@
 
 export const site = {
   name: 'HyperQuant Media',
+  // Names the company is genuinely known by, for Organization.alternateName.
+  // Aliases only -- a name someone would actually use to mean this company,
+  // never a description of what it does. `HQM` is the internal short form the
+  // repositories are named after, and it began as a backronym of the company's
+  // first slogan, "Here Quality Matters" -- which is why the letters are an
+  // alias worth asserting and not an arbitrary contraction. That slogan is
+  // retired and is deliberately not in the structured data: `slogan` means the
+  // current one, and a phrase is not a name whatever it once stood for.
+  // `HyperQuantMedia` is the closed form the
+  // domain and the GitHub organisation carry, so a reader meets it before they
+  // ever meet the spaced one. Case and spacing variants are deliberately
+  // absent: an index normalises those to the same token, so a second entry
+  // adds nothing and a long list reads as stuffing.
+  alternateNames: ['HQM', 'HyperQuant', 'HyperQuantMedia'],
+  // The registered entity, exactly as the MCA register spells it. This is the
+  // string a business registry can be matched against, so it is copied from the
+  // register rather than derived from `name` -- the two are allowed to differ
+  // and a near-miss is worth less than nothing here.
+  //
+  // The LLP is converting to a private limited company. That conversion
+  // incorporates a NEW company under a new CIN and surrenders the LLPIN, so
+  // this string changes to "... Private Limited" on the day it completes. A
+  // later reader finding that edit in the history is looking at the conversion,
+  // not at a typo being corrected.
+  legalName: 'HyperQuant Media LLP',
+  // Date of incorporation from the LLP certificate, ISO 8601 because
+  // schema.org/foundingDate is a Date. This is the incorporation of the legal
+  // entity and nothing wider: it is NOT the same claim as Footer.astro's
+  // `founded`, which is the year the work began. The two happen to share a
+  // year, which is a coincidence to leave alone rather than a reason to derive
+  // one from the other -- the conversion to a private limited company will
+  // incorporate a new entity and move this date while the work's start year
+  // stays put.
+  foundingDate: '2025-03-21',
   url: 'https://hyperquantmedia.com',
   tagline:
     'We chart the uncharted — creative technology, developer tools, and interactive experiences.',

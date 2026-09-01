@@ -55,6 +55,10 @@ const copyright = year > founded ? `${founded}-${year}` : `${founded}`;
         </ul>
       </div>
     </div>
-    <div class="footer-bottom"><p>© {copyright} {site.name}. All rights reserved.</p></div>
+    {/* The copyright names the registered entity, not the brand: a rights
+        notice is a legal claim, and it is the LLP that holds the rights. It
+        also gives Organization.legalName a visible twin, so the structured
+        data states nothing the page keeps to itself. */}
+    <div class="footer-bottom"><p>© {copyright} {site.legalName}. All rights reserved.</p></div>
   </div>
 </footer>
